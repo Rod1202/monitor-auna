@@ -1,55 +1,71 @@
 <template>
-  <v-app>
-    <v-main>
-      <v-container fluid class="fill-height login-bg">
-        <v-row align="center" justify="center">
-          <v-col cols="12" sm="8" md="4">
-            <v-card class="pa-6 rounded-xl" elevation="10">
+  <v-app theme="light">
+    <v-main style="background: #f5f5f5;">
+      <v-container fluid style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+        
+        <v-row class="w-100" align="center" justify="center">
+          <v-col cols="12" sm="8" md="5" lg="3">
 
-              <v-card-title class="text-center mb-2">
-                <v-img
-                  src="/hp-logo.png"
-                  max-width="80"
-                  class="mx-auto mb-4"
-                  contain
-                />
-                <div class="text-h5 font-weight-bold">Monitor SDS</div>
-                <div class="text-caption text-medium-emphasis">Auna — Control de Impresoras</div>
-              </v-card-title>
+            <v-card elevation="0" rounded="xl" border class="pa-8" style="background:#fff;">
 
-              <v-card-text>
-                <v-otp-input
-                  v-model="pin"
-                  length="4"
-                  type="password"
-                  variant="outlined"
-                  :error="error"
-                  @finish="handleLogin"
-                />
-                <v-alert
-                  v-if="error"
-                  type="error"
-                  variant="tonal"
-                  class="mt-3"
-                  density="compact"
-                >
-                  PIN incorrecto
-                </v-alert>
-              </v-card-text>
+              <div class="text-center mb-6">
+                <div class="mx-auto mb-0" style="width: 240px; height: 120px;">
+                  <img src="/logoMT.avif" style="width: 100%; height: 100%; object-fit: contain;" />
+                </div>
+                <div class="text-caption" style="color:#888; line-height: 1.4; margin-top: -5px;">
+                  - Supervisado por - <br>
+                  Gerencia de Operaciones
+                </div>
+              </div>
 
-              <v-card-actions class="px-4">
-                <v-btn
-                  block
-                  color="primary"
-                  size="large"
-                  :loading="loading"
-                  @click="handleLogin"
-                >
-                  Ingresar
-                </v-btn>
-              </v-card-actions>
+              <div class="text-caption text-center mb-3" style="color:#555; font-weight:500; letter-spacing:0.05em;">
+                Ingrese su PIN de acceso
+              </div>
+              
+              <v-otp-input
+                v-model="pin"
+                length="4"
+                type="password"
+                variant="outlined"
+                :error="error"
+                @finish="handleLogin"
+                style="--v-field-border-color: #e0e0e0;"
+              />
+              
+              <v-alert
+                v-if="error"
+                type="error"
+                variant="tonal"
+                class="mt-3"
+                density="compact"
+                rounded="lg"
+              >
+                PIN incorrecto. Intente nuevamente.
+              </v-alert>
+
+              <v-btn
+                block
+                size="large"
+                :loading="loading"
+                @click="handleLogin"
+                rounded="lg"
+                class="mt-5 login-btn"
+                elevation="0"
+              >
+                <v-icon start icon="mdi-login-variant" />
+                Ingresar
+              </v-btn>
+
+              <div class="text-center mt-5">
+                <div class="text-caption" style="color:#aaa;">Power by: Rodrigo Carbonel</div>
+              </div>
 
             </v-card>
+
+            <div class="text-center mt-4">
+              <v-icon icon="mdi-printer-check" size="20" style="color:#bbb;" />
+            </div>
+
           </v-col>
         </v-row>
       </v-container>
@@ -68,19 +84,15 @@ const loading = ref(false)
 
 async function handleLogin() {
   if (pin.value.length < 4) return
-
   loading.value = true
   error.value = false
-
   try {
     const response = await fetch('/.netlify/functions/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: pin.value })
+      body: JSON.stringify({ pin: pin.value }),
     })
-
     const data = await response.json()
-
     if (data.success) {
       sessionStorage.setItem('authenticated', 'true')
       sessionStorage.setItem('app_pin', pin.value)
@@ -98,7 +110,24 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-.login-bg {
-  background: radial-gradient(ellipse at center, #1a237e22 0%, #121212 70%);
+.login-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: #0066ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-btn {
+  background: #0066ff !important;
+  color: white !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.login-btn:hover {
+  background: #0052cc !important;
 }
 </style>

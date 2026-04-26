@@ -4,21 +4,21 @@ import LoginView from '../views/LoginView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/',
-      name: 'login',
-      component: LoginView
-    },
+    { path: '/', name: 'login', component: LoginView },
     {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
       beforeEnter: (to, from, next) => {
-        if (sessionStorage.getItem('authenticated') === 'true') {
-          next()
-        } else {
-          next('/')
-        }
+        sessionStorage.getItem('authenticated') === 'true' ? next() : next('/')
+      }
+    },
+    {
+      path: '/inventario',
+      name: 'inventario',
+      component: () => import('../views/InventarioView.vue'),
+      beforeEnter: (to, from, next) => {
+        sessionStorage.getItem('authenticated') === 'true' ? next() : next('/')
       }
     }
   ]

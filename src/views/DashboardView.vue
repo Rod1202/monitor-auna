@@ -1,82 +1,78 @@
 <template>
-  <v-app>
-    <v-app-bar color="surface" elevation="2" height="64">
-      <v-img src="/hp-logo.png" max-width="40" class="ml-4" contain />
-      <v-app-bar-title class="font-weight-bold text-primary">
-        Monitor SDS — Auna
-      </v-app-bar-title>
-      <template #append>
-        <div class="text-caption text-medium-emphasis mr-3" v-if="store.lastUpdate">
-          Actualizado: {{ formatTime(store.lastUpdate) }}
+  <v-app theme="light">
+
+    <AppSidebar active-route="dashboard" />
+
+    <v-main style="background:#f1f5f9; height: 100vh; display: flex; flex-direction: column;">
+      <div class="pa-6 d-flex flex-column flex-grow-1" style="min-height: 0;">
+
+        <div class="d-flex align-center mb-6 gap-3 flex-shrink-0">
+          <v-text-field
+            v-model="search"
+            prepend-inner-icon="mdi-magnify"
+            placeholder="Buscar serie o área..."
+            variant="outlined"
+            density="compact"
+            hide-details
+            rounded="lg"
+            bg-color="#fff"
+            style="max-width:340px;"
+          />
+          <v-spacer />
+          <div class="text-caption font-weight-medium" style="color:#64748b;" v-if="store.lastUpdate">
+            Actualizado: {{ formatTime(store.lastUpdate) }}
+          </div>
+          <v-btn
+            icon="mdi-refresh"
+            :loading="store.loading"
+            variant="tonal"
+            color="#0066ff"
+            size="small"
+            rounded="lg"
+            @click="store.fetchSdsData()"
+          />
         </div>
-        <v-btn
-          icon="mdi-refresh"
-          :loading="store.loading"
-          color="primary"
-          variant="tonal"
-          class="mr-2"
-          @click="store.fetchSdsData()"
-        />
-        <v-btn
-          icon="mdi-logout"
-          variant="tonal"
-          color="error"
-          class="mr-2"
-          @click="logout"
-        />
-      </template>
-    </v-app-bar>
 
-    <v-main>
-      <v-container fluid class="pa-4">
-
-        <!-- Stats Cards -->
-        <v-row class="mb-4">
-          <v-col cols="6" sm="4" md="2" v-for="stat in statCards" :key="stat.label">
-            <v-card
-              rounded="lg"
-              :color="stat.color"
-              :variant="filtroEstadoCard === stat.filtro ? 'elevated' : 'tonal'"
-              class="pa-3 text-center"
-              style="cursor:pointer"
+        <v-row class="mb-6 flex-shrink-0" dense>
+          <v-col v-for="stat in statCards" :key="stat.label" cols="6" sm="4" md="2">
+            <StatCard
+              :label="stat.label"
+              :value="stat.value"
+              :text-color="stat.textColor"
+              :is-active="filtroEstadoCard === stat.filtro"
+              :total-value="store.stats.total"
+              :icon="stat.icon"
               @click="toggleFiltroCard(stat.filtro)"
-            >
-              <v-icon :icon="stat.icon" size="28" class="mb-1" />
-              <div class="text-h5 font-weight-bold">{{ stat.value }}</div>
-              <div class="text-caption">{{ stat.label }}</div>
-              <v-icon
-                v-if="filtroEstadoCard === stat.filtro"
-                icon="mdi-filter-check"
-                size="14"
-                class="mt-1"
-              />
-            </v-card>
+            />
           </v-col>
         </v-row>
 
-        <!-- Filtros -->
-        <v-card rounded="lg" class="mb-4 pa-3" color="surface">
-          <v-row density="comfortable">
-            <v-col cols="12" sm="6" md="3">
-              <v-text-field
-                v-model="search"
-                prepend-inner-icon="mdi-magnify"
-                label="Buscar serie, sede, área..."
-                variant="outlined"
-                density="compact"
-                hide-details
-                clearable
-              />
-            </v-col>
+        <v-card 
+          elevation="0" 
+          rounded="xl" 
+          class="pa-5 mb-6 flex-shrink-0" 
+          style="background:#fff; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.02);"
+        >
+          <div class="d-flex align-center mb-4">
+            <v-icon icon="mdi-filter-variant" size="20" color="#64748b" class="mr-2" />
+            <span class="font-weight-bold" style="color: #334155; letter-spacing: 0.05em; text-transform: uppercase; font-size: 12px;">
+              Filtros de Búsqueda
+            </span>
+          </div>
+          
+          <v-row dense align="center">
             <v-col cols="12" sm="6" md="2">
               <v-select
-                v-model="filtroEstado"
-                :items="estadoOptions"
-                label="Estado SDS"
+                v-model="filtroSede"
+                :items="sedeOptions"
+                label="Sede"
                 variant="outlined"
                 density="compact"
                 hide-details
+                rounded="lg"
                 clearable
+                bg-color="#f8fafc"
+                color="#0066ff"
               />
             </v-col>
             <v-col cols="12" sm="6" md="2">
@@ -87,18 +83,24 @@
                 variant="outlined"
                 density="compact"
                 hide-details
+                rounded="lg"
                 clearable
+                bg-color="#f8fafc"
+                color="#0066ff"
               />
             </v-col>
             <v-col cols="12" sm="6" md="2">
               <v-select
                 v-model="filtroTipo"
-                :items="['COLOR', 'MONOCROMATICA']"
+                :items="tipoOptions"
                 label="Tipo"
                 variant="outlined"
                 density="compact"
                 hide-details
+                rounded="lg"
                 clearable
+                bg-color="#f8fafc"
+                color="#0066ff"
               />
             </v-col>
             <v-col cols="12" sm="6" md="2">
@@ -109,496 +111,209 @@
                 variant="outlined"
                 density="compact"
                 hide-details
+                rounded="lg"
                 clearable
+                bg-color="#f8fafc"
+                color="#0066ff"
               />
             </v-col>
-            <v-col cols="12" md="1" class="d-flex align-center">
-              <v-btn variant="tonal" color="secondary" block @click="limpiarFiltros">
+            <v-col cols="12" sm="6" md="2">
+              <v-select
+                v-model="filtroEstado"
+                :items="estadoOptions"
+                label="Estado SDS"
+                variant="outlined"
+                density="compact"
+                hide-details
+                rounded="lg"
+                clearable
+                bg-color="#f8fafc"
+                color="#0066ff"
+              />
+            </v-col>
+            <v-col cols="12" md="2">
+              <v-btn
+                color="#0066ff"
+                variant="tonal"
+                rounded="lg"
+                size="large"
+                block
+                class="text-none font-weight-bold"
+                style="height: 40px;"
+                @click="limpiarFiltros"
+              >
+                <v-icon start icon="mdi-filter-off-outline" size="18" />
                 Limpiar
               </v-btn>
             </v-col>
           </v-row>
         </v-card>
 
-        <!-- Tabla principal -->
-        <v-card rounded="lg" color="surface">
+        <v-card 
+          elevation="0" 
+          rounded="xl" 
+          class="d-flex flex-column flex-grow-1"
+          style="background:#fff; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.02); min-height: 0; overflow: hidden;"
+        >
           <v-data-table
             :headers="headers"
             :items="filteredData"
             :loading="store.loading"
-            density="compact"
+            density="comfortable"
             fixed-header
-            height="560"
+            class="custom-table"
             items-per-page="25"
+            hover
             @click:row="(_, { item }) => openDetail(item)"
-            style="cursor:pointer"
           >
+
+            <template #item.sede="{ item }">
+              <div class="text-body-2 font-weight-bold" style="color: #1e293b;">
+                {{ item.sede }}
+              </div>
+            </template>
+
+            <template #item.area="{ item }">
+              <div>
+                <div class="text-body-2 font-weight-medium" style="color: #334155;">{{ item.area }}</div>
+                <div class="text-caption" style="color:#94a3b8;">{{ item.sub_area }}</div>
+              </div>
+            </template>
+
+            <template #item.operario="{ item }">
+              <div class="text-body-2" style="color: #334155;">
+                {{ item.operario || 'Sin asignar' }}
+              </div>
+            </template>
+
+            <template #item.serie="{ item }">
+              <div class="d-flex flex-column justify-center" style="gap: 2px; padding-top: 2px; padding-bottom: 2px;">
+                <div style="font-size: 15px; font-weight: 800; color: #0066ff; letter-spacing: 0.02em; line-height: 1.1;">
+                  {{ item.serie }}
+                </div>
+                
+                <div style="font-size: 10.5px; font-weight: 400; color: #94a3b8; text-transform: uppercase; line-height: 1.2; max-width: 150px;">
+                  {{ item.modelo_completo || 'MODELO NO ESPECIFICADO' }}
+                </div>
+              </div>
+            </template>
+
+            <template #item.status="{ item }">
+              <StatusChip :status="item.status" />
+            </template>
+
             <template #item.estado_dispositivo="{ item }">
-              <v-chip
-                :color="estadoColor(item.estado_dispositivo)"
-                size="small"
-                variant="tonal"
-                label
-              >
-                <v-icon start :icon="estadoIcon(item.estado_dispositivo)" size="14" />
-                {{ item.estado_dispositivo }}
-              </v-chip>
+              <EstadoBadge :estado="item.estado_dispositivo" />
             </template>
 
             <template #item.toners="{ item }">
-              <div class="d-flex gap-1 py-1" v-if="item.toners.length">
-                <v-tooltip
+              <div class="d-flex gap-1 align-center py-1" v-if="item.toners && item.toners.length">
+                <TonerGauge
                   v-for="toner in item.toners"
                   :key="toner.index"
-                  :text="`${toner.colour} — ${toner.percentLeft}% — ${toner.estado_toner}`"
-                >
-                  <template #activator="{ props }">
-                    <v-progress-circular
-                      v-bind="props"
-                      :model-value="toner.percentLeft"
-                      :color="tonerColor(toner.colour, toner.percentLeft)"
-                      size="28"
-                      width="4"
-                    >
-                      <span style="font-size:8px">{{ toner.percentLeft }}</span>
-                    </v-progress-circular>
-                  </template>
-                </v-tooltip>
+                  :colour="toner.colour"
+                  :percent-left="toner.percentLeft"
+                  :days-left="toner.daysLeft"
+                  :sku="toner.sku"
+                  :size="32"
+                  :width="4"
+                />
               </div>
-              <span v-else class="text-medium-emphasis text-caption">Sin datos</span>
+              <span v-else class="text-caption" style="color:#cbd5e1;">—</span>
             </template>
 
             <template #item.ultimo_suministro="{ item }">
               <div v-if="item.ultimo_suministro">
-                <div class="text-caption font-weight-medium">{{ item.ultimo_suministro.descripcion }}</div>
-                <v-chip
-                  :color="envioColor(item.ultimo_suministro.status_envio)"
-                  size="x-small"
-                  variant="tonal"
-                  label
+                <div class="text-caption font-weight-bold" style="color:#334155; margin-bottom: 2px;">
+                  {{ item.ultimo_suministro.fecha_entrega }}
+                </div>
+                <v-chip 
+                  size="x-small" 
+                  variant="flat" 
+                  :color="item.ultimo_suministro.status_envio?.toUpperCase() === 'ENTREGADO' ? '#10b981' : '#f59e0b'"
+                  class="font-weight-bold text-white"
                 >
-                  {{ item.ultimo_suministro.status_envio }}
+                  {{ item.ultimo_suministro.status_envio || 'DESCONOCIDO' }}
                 </v-chip>
               </div>
-              <span v-else class="text-medium-emphasis text-caption">Sin registro</span>
+              <span v-else class="text-caption" style="color:#cbd5e1;">Sin envíos</span>
             </template>
 
-            <template #item.status="{ item }">
-              <v-chip
-                :color="item.status === 'PRODUCCION' || item.status === 'PRODUCCIÓN' ? 'success' : 'warning'"
+            <template #item.accion_requerida="{ item }">
+              <v-btn
+                variant="outlined"
+                color="#cbd5e1"
                 size="small"
-                variant="tonal"
-                label
+                rounded="lg"
+                class="text-none font-weight-bold"
+                style="color: #64748b;"
+                elevation="0"
+                @click.stop="openDetail(item)"
               >
-                {{ item.status }}
-              </v-chip>
+                Revisar
+              </v-btn>
             </template>
 
           </v-data-table>
         </v-card>
 
-      </v-container>
+      </div>
     </v-main>
 
-    <!-- ===== DIALOG DETALLE ===== -->
-    <v-dialog v-model="dialog" max-width="780" scrollable>
-      <v-card v-if="selectedDevice" rounded="lg">
-        <v-card-title class="pa-4 d-flex align-center">
-          <v-icon icon="mdi-printer" class="mr-2" color="primary" />
-          {{ selectedDevice.modelo_completo }}
-          <v-spacer />
-          <v-btn icon="mdi-close" variant="text" @click="dialog = false" />
-        </v-card-title>
-        <v-divider />
-
-        <!-- Tabs del dialog -->
-        <v-tabs v-model="dialogTab" color="primary" class="px-4">
-          <v-tab value="info">Info</v-tab>
-          <v-tab value="toners">Tóners</v-tab>
-          <v-tab value="suministro">Suministro</v-tab>
-          <v-tab value="editar">
-            <v-icon start icon="mdi-pencil" size="16" />
-            Editar
-          </v-tab>
-        </v-tabs>
-        <v-divider />
-
-        <v-card-text class="pa-4">
-          <v-tabs-window v-model="dialogTab">
-
-            <!-- TAB INFO -->
-            <v-tabs-window-item value="info">
-              <v-row>
-                <v-col cols="12" md="6">
-                  <div class="text-subtitle-2 text-primary mb-2">Ubicación</div>
-                  <v-list density="compact" class="bg-transparent pa-0">
-                    <v-list-item v-for="(val, key) in ubicacionInfo" :key="key" class="px-0">
-                      <template #prepend>
-                        <span class="text-caption text-medium-emphasis mr-2" style="min-width:80px">{{ key }}</span>
-                      </template>
-                      <span class="text-caption font-weight-medium">{{ val }}</span>
-                    </v-list-item>
-                  </v-list>
-                </v-col>
-                <v-col cols="12" md="6">
-                  <div class="text-subtitle-2 text-primary mb-2">Estado SDS</div>
-                  <v-chip :color="estadoColor(selectedDevice.estado_dispositivo)" variant="tonal" label class="mb-3">
-                    {{ selectedDevice.estado_dispositivo }}
-                  </v-chip>
-                  <div class="text-caption text-medium-emphasis mt-2">
-                    Último contacto: {{ selectedDevice.lastContact || 'N/A' }}
-                  </div>
-                  <div class="text-caption text-medium-emphasis">
-                    Serie: {{ selectedDevice.serie }}
-                  </div>
-                  <div class="text-caption text-medium-emphasis">
-                    Modelo SDS: {{ selectedDevice.modelo_sds || 'N/A' }}
-                  </div>
-                </v-col>
-              </v-row>
-            </v-tabs-window-item>
-
-            <!-- TAB TONERS -->
-            <v-tabs-window-item value="toners">
-              <div v-if="selectedDevice.toners.length">
-                <v-row dense>
-                  <v-col cols="6" sm="3" v-for="toner in selectedDevice.toners" :key="toner.index">
-                    <v-card variant="tonal" :color="tonerColor(toner.colour, toner.percentLeft)" rounded="lg" class="pa-3 text-center">
-                      <v-progress-circular
-                        :model-value="toner.percentLeft"
-                        :color="tonerColor(toner.colour, toner.percentLeft)"
-                        size="56"
-                        width="6"
-                        class="mb-2"
-                      >
-                        {{ toner.percentLeft }}%
-                      </v-progress-circular>
-                      <div class="text-caption font-weight-bold">{{ toner.colour }}</div>
-                      <div class="text-caption">{{ toner.daysLeft }} días</div>
-                      <div class="text-caption text-medium-emphasis">{{ toner.sku }}</div>
-                    </v-card>
-                  </v-col>
-                </v-row>
-              </div>
-              <div v-else class="text-center py-6">
-                <v-icon icon="mdi-toner" size="48" color="grey" class="mb-2" />
-                <div class="text-caption text-medium-emphasis">Sin datos de tóner desde SDS</div>
-              </div>
-            </v-tabs-window-item>
-
-            <!-- TAB SUMINISTRO -->
-            <v-tabs-window-item value="suministro">
-              <div v-if="selectedDevice.ultimo_suministro">
-                <v-card variant="outlined" rounded="lg" class="pa-4">
-                  <v-row dense>
-                    <v-col cols="6">
-                      <div class="text-caption text-medium-emphasis">Descripción</div>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDevice.ultimo_suministro.descripcion }}</div>
-                    </v-col>
-                    <v-col cols="6">
-                      <div class="text-caption text-medium-emphasis">SKU</div>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDevice.ultimo_suministro.sku }}</div>
-                    </v-col>
-                    <v-col cols="6">
-                      <div class="text-caption text-medium-emphasis">Color</div>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDevice.ultimo_suministro.color }}</div>
-                    </v-col>
-                    <v-col cols="6">
-                      <div class="text-caption text-medium-emphasis">Guía</div>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDevice.ultimo_suministro.guia }}</div>
-                    </v-col>
-                    <v-col cols="6">
-                      <div class="text-caption text-medium-emphasis">Fecha entrega</div>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDevice.ultimo_suministro.fecha_entrega }}</div>
-                    </v-col>
-                    <v-col cols="6">
-                      <div class="text-caption text-medium-emphasis">Porcentaje al envío</div>
-                      <div class="text-body-2 font-weight-medium">{{ selectedDevice.ultimo_suministro.porcentaje }}%</div>
-                    </v-col>
-                    <v-col cols="12">
-                      <v-chip :color="envioColor(selectedDevice.ultimo_suministro.status_envio)" size="small" variant="tonal" label>
-                        {{ selectedDevice.ultimo_suministro.status_envio }}
-                      </v-chip>
-                    </v-col>
-                  </v-row>
-                </v-card>
-              </div>
-              <div v-else class="text-center py-6">
-                <v-icon icon="mdi-package-variant" size="48" color="grey" class="mb-2" />
-                <div class="text-caption text-medium-emphasis">Sin registro de suministros</div>
-              </div>
-            </v-tabs-window-item>
-
-            <!-- TAB EDITAR -->
-            <v-tabs-window-item value="editar">
-              <v-row>
-
-                <!-- Editar inventario -->
-                <v-col cols="12">
-                  <v-expansion-panels variant="accordion">
-
-                    <!-- Panel 1: Datos de ubicación -->
-                    <v-expansion-panel>
-                      <v-expansion-panel-title>
-                        <v-icon icon="mdi-map-marker" class="mr-2" color="primary" size="18" />
-                        Editar datos de ubicación
-                      </v-expansion-panel-title>
-                      <v-expansion-panel-text>
-                        <v-row dense class="mt-2">
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="editForm.sede" label="Sede" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="editForm.area" label="Área" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="editForm.sub_area" label="Sub Área" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="editForm.piso" label="Piso" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="editForm.operario" label="Operario" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-select
-                              v-model="editForm.status"
-                              :items="['PRODUCCION', 'BACKUP']"
-                              label="Status"
-                              variant="outlined"
-                              density="compact"
-                            />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-select
-                              v-model="editForm.zona"
-                              :items="['LIMA', 'PROVINCIA']"
-                              label="Zona"
-                              variant="outlined"
-                              density="compact"
-                            />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="editForm.unidad_negocio" label="Unidad de Negocio" variant="outlined" density="compact" />
-                          </v-col>
-                        </v-row>
-                        <v-btn
-                          color="primary"
-                          variant="tonal"
-                          :loading="savingInventario"
-                          @click="guardarInventario"
-                          class="mt-2"
-                        >
-                          <v-icon start icon="mdi-content-save" />
-                          Guardar cambios
-                        </v-btn>
-                      </v-expansion-panel-text>
-                    </v-expansion-panel>
-
-                    <!-- Panel 2: Tóner manual -->
-                    <v-expansion-panel>
-                      <v-expansion-panel-title>
-                        <v-icon icon="mdi-toner" class="mr-2" color="warning" size="18" />
-                        Registrar tóner manual (Sin SDS)
-                      </v-expansion-panel-title>
-                      <v-expansion-panel-text>
-                        <v-row dense class="mt-2">
-                          <v-col cols="12" sm="6" v-for="color in coloresDisponibles" :key="color.key">
-                            <v-text-field
-                              v-model="tonerManualForm[color.key]"
-                              :label="`${color.label} (%)`"
-                              variant="outlined"
-                              density="compact"
-                              type="number"
-                              min="0"
-                              max="100"
-                              :prepend-inner-icon="'mdi-circle'"
-                              :color="color.color"
-                            />
-                          </v-col>
-                        </v-row>
-                        <v-btn
-                          color="warning"
-                          variant="tonal"
-                          :loading="savingToner"
-                          @click="guardarTonerManual"
-                          class="mt-2"
-                        >
-                          <v-icon start icon="mdi-content-save" />
-                          Guardar tóner manual
-                        </v-btn>
-                      </v-expansion-panel-text>
-                    </v-expansion-panel>
-
-                    <!-- Panel 3: Agregar suministro -->
-                    <v-expansion-panel>
-                      <v-expansion-panel-title>
-                        <v-icon icon="mdi-package-variant-plus" class="mr-2" color="success" size="18" />
-                        Agregar registro de suministro
-                      </v-expansion-panel-title>
-                      <v-expansion-panel-text>
-                        <v-row dense class="mt-2">
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.descripcion_suministro" label="Descripción" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.sku" label="SKU" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-select
-                              v-model="suministroForm.Color"
-                              :items="['BLACK', 'CYAN', 'MAGENTA', 'YELLOW']"
-                              label="Color"
-                              variant="outlined"
-                              density="compact"
-                            />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.guia" label="Guía" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.fecha_enprega" label="Fecha entrega (DD/MM/YYYY)" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.porcentaje" label="Porcentaje (%)" type="number" min="0" max="100" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.dias_restantes" label="Días restantes" type="number" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-select
-                              v-model="suministroForm.status_envio"
-                              :items="['ATENDIDO', 'PENDIENTE', 'CANCELADO']"
-                              label="Status envío"
-                              variant="outlined"
-                              density="compact"
-                            />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.contacto" label="Contacto" variant="outlined" density="compact" />
-                          </v-col>
-                          <v-col cols="12" sm="6">
-                            <v-text-field v-model="suministroForm.atencion" label="Atención" variant="outlined" density="compact" />
-                          </v-col>
-                        </v-row>
-                        <v-btn
-                          color="success"
-                          variant="tonal"
-                          :loading="savingSuministro"
-                          @click="guardarSuministro"
-                          class="mt-2"
-                        >
-                          <v-icon start icon="mdi-plus" />
-                          Agregar suministro
-                        </v-btn>
-                      </v-expansion-panel-text>
-                    </v-expansion-panel>
-
-                  </v-expansion-panels>
-                </v-col>
-              </v-row>
-            </v-tabs-window-item>
-
-          </v-tabs-window>
-        </v-card-text>
-
-        <!-- Snackbar feedback -->
-        <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="bottom right">
-          {{ snackbar.text }}
-        </v-snackbar>
-
-      </v-card>
-    </v-dialog>
+    <DeviceDetailDialog
+      v-model="dialog"
+      :device="selectedDevice"
+    />
 
   </v-app>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useSdsStore } from '../stores/sdsStore'
+import AppSidebar from '../components/AppSidebar.vue'
+import StatCard from '../components/StatCard.vue'
+import TonerGauge from '../components/TonerGauge.vue'
+import EstadoBadge from '../components/EstadoBadge.vue'
+import StatusChip from '../components/StatusChip.vue'
+import DeviceDetailDialog from '../components/DeviceDetailDialog.vue'
 
-const router = useRouter()
 const store = useSdsStore()
 
-// --- Filtros ---
 const search = ref('')
 const filtroEstado = ref(null)
 const filtroZona = ref(null)
 const filtroTipo = ref(null)
 const filtroStatus = ref(null)
+const filtroSede = ref(null)
 const filtroEstadoCard = ref(null)
-
-// --- Dialog ---
 const dialog = ref(false)
-const dialogTab = ref('info')
 const selectedDevice = ref(null)
 
-// --- Saving states ---
-const savingInventario = ref(false)
-const savingToner = ref(false)
-const savingSuministro = ref(false)
-
-// --- Snackbar ---
-const snackbar = ref({ show: false, text: '', color: 'success' })
-
-// --- Formularios ---
-const editForm = ref({})
-const tonerManualForm = ref({ BLACK: null, CYAN: null, MAGENTA: null, YELLOW: null })
-const suministroForm = ref({
-  descripcion_suministro: '',
-  sku: '',
-  Color: 'BLACK',
-  guia: '',
-  fecha_enprega: '',
-  porcentaje: null,
-  dias_restantes: null,
-  status_envio: 'ATENDIDO',
-  contacto: '',
-  atencion: 'BOLSA'
-})
-
-const coloresDisponibles = [
-  { key: 'BLACK', label: 'Negro', color: 'blue-grey' },
-  { key: 'CYAN', label: 'Cyan', color: 'cyan' },
-  { key: 'MAGENTA', label: 'Magenta', color: 'pink' },
-  { key: 'YELLOW', label: 'Amarillo', color: 'yellow-darken-2' }
-]
-
-// --- Headers tabla ---
 const headers = [
-  { title: 'Serie', key: 'serie', width: '130px' },
-  { title: 'Sede', key: 'sede' },
-  { title: 'Área', key: 'area' },
-  { title: 'Sub Área', key: 'sub_area' },
-  { title: 'Piso', key: 'piso', width: '60px' },
-  { title: 'Operario', key: 'operario' },
-  { title: 'Tipo', key: 'tipo', width: '110px' },
+  { title: 'Sede', key: 'sede', width: '130px' },
+  { title: 'Área / Sub Área', key: 'area', width: '160px' },
+  { title: 'Operario', key: 'operario', width: '140px' },
+  { title: 'Serie / Modelo', key: 'serie', width: '140px' },
   { title: 'Status', key: 'status', width: '110px' },
-  { title: 'Estado SDS', key: 'estado_dispositivo', width: '150px' },
-  { title: 'Tóners', key: 'toners', width: '140px', sortable: false },
-  { title: 'Último Suministro', key: 'ultimo_suministro', sortable: false },
+  { title: 'Estado SDS', key: 'estado_dispositivo', width: '140px' },
+  { title: 'Tóners', key: 'toners', width: '160px', sortable: false },
+  { title: 'Último Envío / Status', key: 'ultimo_suministro', width: '160px', sortable: false },
+  { title: 'Acción Requerida', key: 'accion_requerida', align: 'center', width: '140px', sortable: false },
 ]
 
-// --- Opciones filtros ---
-const estadoOptions = ['SINCRONIZADO', 'STAND_BY', 'DESINCRONIZADO', 'SIN_SDS']
-
-const zonaOptions = computed(() =>
-  [...new Set(store.combinedData.map(d => d.zona).filter(Boolean))]
-)
-
-const statusOptions = computed(() =>
-  [...new Set(store.combinedData.map(d => d.status).filter(Boolean))]
-)
-
-// --- Data filtrada ---
-const filteredData = computed(() => {
+const filterDataForOptions = (skipKey = null) => {
   return store.combinedData.filter(item => {
-    if (filtroEstadoCard.value && item.estado_dispositivo !== filtroEstadoCard.value) return false
-    if (filtroEstado.value && item.estado_dispositivo !== filtroEstado.value) return false
-    if (filtroZona.value && item.zona !== filtroZona.value) return false
-    if (filtroTipo.value && item.tipo !== filtroTipo.value) return false
-    if (filtroStatus.value && item.status !== filtroStatus.value) return false
+    if (filtroEstadoCard.value === 'CRITICO') {
+      if (!item.toners?.some(t => t.estado_toner === 'CRITICO')) return false
+    } else if (filtroEstadoCard.value && item.estado_dispositivo !== filtroEstadoCard.value) return false
+
+    if (skipKey !== 'estado_dispositivo' && filtroEstado.value && item.estado_dispositivo !== filtroEstado.value) return false
+    if (skipKey !== 'zona' && filtroZona.value && item.zona !== filtroZona.value) return false
+    if (skipKey !== 'tipo' && filtroTipo.value && item.tipo !== filtroTipo.value) return false
+    if (skipKey !== 'status' && filtroStatus.value && item.status !== filtroStatus.value) return false
+    if (skipKey !== 'sede' && filtroSede.value && item.sede !== filtroSede.value) return false
+
     if (search.value) {
       const q = search.value.toLowerCase()
       return (
@@ -609,205 +324,35 @@ const filteredData = computed(() => {
         item.operario?.toLowerCase().includes(q)
       )
     }
+    
     return true
   })
-})
+}
 
-// --- Stat cards ---
+const filteredData = computed(() => filterDataForOptions(null))
+
+const sedeOptions = computed(() => [...new Set(filterDataForOptions('sede').map(d => d.sede).filter(Boolean))].sort())
+const zonaOptions = computed(() => [...new Set(filterDataForOptions('zona').map(d => d.zona).filter(Boolean))].sort())
+const tipoOptions = computed(() => [...new Set(filterDataForOptions('tipo').map(d => d.tipo).filter(Boolean))].sort())
+const statusOptions = computed(() => [...new Set(filterDataForOptions('status').map(d => d.status).filter(Boolean))].sort())
+const estadoOptions = computed(() => [...new Set(filterDataForOptions('estado_dispositivo').map(d => d.estado_dispositivo).filter(Boolean))].sort())
+
 const statCards = computed(() => [
-  { label: 'Total', value: store.stats.total, color: 'primary', icon: 'mdi-printer', filtro: null },
-  { label: 'Sincronizados', value: store.stats.sincronizados, color: 'success', icon: 'mdi-check-circle', filtro: 'SINCRONIZADO' },
-  { label: 'Stand By', value: store.stats.standby, color: 'warning', icon: 'mdi-clock-outline', filtro: 'STAND_BY' },
-  { label: 'Desincronizados', value: store.stats.desincronizados, color: 'error', icon: 'mdi-alert-circle', filtro: 'DESINCRONIZADO' },
-  { label: 'Sin SDS', value: store.stats.sinSds, color: 'secondary', icon: 'mdi-wifi-off', filtro: 'SIN_SDS' },
-  { label: 'Críticos', value: store.stats.criticos, color: 'error', icon: 'mdi-toner', filtro: 'CRITICO' },
+  { label: 'Total', value: store.stats.total, textColor: '#0066ff', filtro: null, icon: 'mdi-printer-outline' },
+  { label: 'Sincronizados', value: store.stats.sincronizados, textColor: '#2e7d32', filtro: 'SINCRONIZADO', icon: 'mdi-cloud-check-outline' },
+  { label: 'Stand By', value: store.stats.standby, textColor: '#f57c00', filtro: 'STAND_BY', icon: 'mdi-pause-circle-outline' },
+  { label: 'Desincronizados', value: store.stats.desincronizados, textColor: '#c62828', filtro: 'DESINCRONIZADO', icon: 'mdi-cloud-off-outline' },
+  { label: 'Sin SDS', value: store.stats.sinSds, textColor: '#555', filtro: 'SIN_SDS', icon: 'mdi-laptop-off' },
+  { label: 'Críticos', value: store.stats.criticos, textColor: '#c62828', filtro: 'CRITICO', icon: 'mdi-alert-circle-outline' },
 ])
 
-// --- Toggle filtro por card ---
 function toggleFiltroCard(filtro) {
-  if (!filtro) {
-    filtroEstadoCard.value = null
-    return
-  }
   filtroEstadoCard.value = filtroEstadoCard.value === filtro ? null : filtro
 }
 
-// --- Info ubicación para el dialog ---
-const ubicacionInfo = computed(() => {
-  if (!selectedDevice.value) return {}
-  return {
-    'Unidad': selectedDevice.value.unidad_negocio,
-    'Zona': selectedDevice.value.zona,
-    'Sede': selectedDevice.value.sede,
-    'Área': selectedDevice.value.area,
-    'Sub Área': selectedDevice.value.sub_area,
-    'Piso': selectedDevice.value.piso,
-    'Operario': selectedDevice.value.operario,
-    'Tipo': selectedDevice.value.tipo,
-    'Tamaño': selectedDevice.value.tamanio,
-  }
-})
-
-// --- Abrir dialog ---
 function openDetail(item) {
   selectedDevice.value = item
-  dialogTab.value = 'info'
-  editForm.value = {
-    sede: item.sede,
-    area: item.area,
-    sub_area: item.sub_area,
-    piso: item.piso,
-    operario: item.operario,
-    status: item.status,
-    zona: item.zona,
-    unidad_negocio: item.unidad_negocio
-  }
-  tonerManualForm.value = {
-    BLACK: item.toners_manual?.BLACK || null,
-    CYAN: item.toners_manual?.CYAN || null,
-    MAGENTA: item.toners_manual?.MAGENTA || null,
-    YELLOW: item.toners_manual?.YELLOW || null
-  }
-  suministroForm.value = {
-    descripcion_suministro: '',
-    sku: '',
-    Color: 'BLACK',
-    guia: '',
-    fecha_enprega: '',
-    porcentaje: null,
-    dias_restantes: null,
-    status_envio: 'ATENDIDO',
-    contacto: '',
-    atencion: 'BOLSA'
-  }
   dialog.value = true
-}
-
-// --- Guardar inventario ---
-async function guardarInventario() {
-  savingInventario.value = true
-  try {
-    const nuevoInventario = store.inventario.map(item => {
-      if (item.serie === selectedDevice.value.serie) {
-        return { ...item, ...editForm.value }
-      }
-      return item
-    })
-    const ok = await store.updateJson('inventario.json', nuevoInventario)
-    snackbar.value = {
-      show: true,
-      text: ok ? 'Inventario actualizado correctamente' : 'Error al guardar',
-      color: ok ? 'success' : 'error'
-    }
-  } finally {
-    savingInventario.value = false
-  }
-}
-
-// --- Guardar tóner manual ---
-async function guardarTonerManual() {
-  savingToner.value = true
-  try {
-    const nuevoInventario = store.inventario.map(item => {
-      if (item.serie === selectedDevice.value.serie) {
-        return { ...item, toners_manual: { ...tonerManualForm.value } }
-      }
-      return item
-    })
-    const ok = await store.updateJson('inventario.json', nuevoInventario)
-    snackbar.value = {
-      show: true,
-      text: ok ? 'Tóner manual guardado correctamente' : 'Error al guardar',
-      color: ok ? 'success' : 'error'
-    }
-  } finally {
-    savingToner.value = false
-  }
-}
-
-// --- Agregar suministro ---
-async function guardarSuministro() {
-  savingSuministro.value = true
-  try {
-    const hoy = new Date().toLocaleDateString('es-PE')
-    const nuevoSuministro = {
-      ...suministroForm.value,
-      serie: selectedDevice.value.serie,
-      modelo: selectedDevice.value.modelo_completo,
-      cliente: selectedDevice.value.unidad_negocio,
-      direccion: `${selectedDevice.value.sede} - ${selectedDevice.value.area}`,
-      fecha_registro: hoy,
-      tipo: 'SUMINISTROS',
-      cantidad: 1
-    }
-    const nuevosSuministros = [nuevoSuministro, ...store.suministros]
-    const ok = await store.updateJson('suministros.json', nuevosSuministros)
-    snackbar.value = {
-      show: true,
-      text: ok ? 'Suministro agregado correctamente' : 'Error al guardar',
-      color: ok ? 'success' : 'error'
-    }
-    if (ok) {
-      suministroForm.value = {
-        descripcion_suministro: '',
-        sku: '',
-        Color: 'BLACK',
-        guia: '',
-        fecha_enprega: '',
-        porcentaje: null,
-        dias_restantes: null,
-        status_envio: 'ATENDIDO',
-        contacto: '',
-        atencion: 'BOLSA'
-      }
-    }
-  } finally {
-    savingSuministro.value = false
-  }
-}
-
-// --- Helpers de color ---
-function estadoColor(estado) {
-  const map = {
-    SINCRONIZADO: 'success',
-    STAND_BY: 'warning',
-    DESINCRONIZADO: 'error',
-    SIN_SDS: 'secondary',
-    SIN_DATOS: 'grey'
-  }
-  return map[estado] || 'grey'
-}
-
-function estadoIcon(estado) {
-  const map = {
-    SINCRONIZADO: 'mdi-check-circle',
-    STAND_BY: 'mdi-clock-outline',
-    DESINCRONIZADO: 'mdi-alert-circle',
-    SIN_SDS: 'mdi-wifi-off',
-    SIN_DATOS: 'mdi-help-circle'
-  }
-  return map[estado] || 'mdi-help-circle'
-}
-
-function tonerColor(colour, percent) {
-  if (percent <= 10) return 'error'
-  if (percent <= 25) return 'warning'
-  const map = {
-    BLACK: 'blue-grey',
-    CYAN: 'cyan',
-    MAGENTA: 'pink',
-    YELLOW: 'yellow-darken-2'
-  }
-  return map[colour] || 'primary'
-}
-
-function envioColor(status) {
-  const map = {
-    ATENDIDO: 'success',
-    PENDIENTE: 'warning',
-    CANCELADO: 'error'
-  }
-  return map[status] || 'grey'
 }
 
 function formatTime(date) {
@@ -819,26 +364,58 @@ function limpiarFiltros() {
   filtroZona.value = null
   filtroTipo.value = null
   filtroStatus.value = null
+  filtroSede.value = null
   filtroEstadoCard.value = null
   search.value = ''
 }
 
-function logout() {
-  sessionStorage.removeItem('authenticated')
-  sessionStorage.removeItem('app_pin')
-  router.push('/')
-}
-
-// --- Auto refresh cada 2 horas ---
 let interval = null
-
 onMounted(async () => {
   await store.loadStaticData()
   await store.fetchSdsData()
   interval = setInterval(() => store.fetchSdsData(), 2 * 60 * 60 * 1000)
 })
-
-onUnmounted(() => {
-  if (interval) clearInterval(interval)
-})
+onUnmounted(() => { if (interval) clearInterval(interval) })
 </script>
+
+<style scoped>
+:deep(.v-field) {
+  border-color: #e2e8f0 !important;
+}
+:deep(.v-data-table) {
+  font-family: inherit;
+}
+:deep(.v-data-table th) {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #64748b !important;
+  font-weight: 700 !important;
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+:deep(.v-data-table td) {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* --- SOLUCIÓN DE SCROLL Y PAGINACIÓN PARA LA TABLA --- */
+.custom-table {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* El cuerpo de la tabla crecerá ocupando el espacio libre y mostrará su propio scroll */
+:deep(.custom-table .v-table__wrapper) {
+  flex-grow: 1 !important;
+  overflow-y: auto !important;
+  min-height: 0; /* Obliga a flexbox a respetar los límites del contenedor padre */
+}
+
+/* Evitamos que la zona de paginación reduzca su tamaño */
+:deep(.custom-table .v-data-table-footer) {
+  flex-shrink: 0 !important;
+  border-top: 1px solid #e2e8f0 !important;
+  background-color: #fff;
+}
+</style>

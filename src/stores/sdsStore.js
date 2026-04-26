@@ -12,6 +12,19 @@ export const useSdsStore = defineStore('sds', () => {
   const lastUpdate = ref(null)
   const error = ref(null)
 
+  // --- Función auxiliar para leer fechas DD/MM/YYYY ---
+  const parseFecha = (fechaStr) => {
+    if (!fechaStr) return 0
+    const partes = fechaStr.split('/')
+    if (partes.length === 3) {
+      // split devuelve: [0] = dia, [1] = mes, [2] = año
+      // Meses en JS van de 0 a 11, por eso restamos 1
+      return new Date(partes[2], partes[1] - 1, partes[0]).getTime()
+    }
+    // Fallback por si alguna fecha viene en formato ISO estándar
+    return new Date(fechaStr).getTime() || 0
+  }
+
   // --- Cargar archivos estáticos ---
   async function loadStaticData() {
     try {
@@ -46,7 +59,7 @@ export const useSdsStore = defineStore('sds', () => {
     }
   }
 
-  // --- Data combinada (cruce de las 3 fuentes) ---
+  // --- Data combinada (cruce de las 3 fuentes y validaciones internas) ---
   const combinedData = computed(() => {
     return inventario.value.map(item => {
       const serie = item.serie
@@ -57,10 +70,48 @@ export const useSdsStore = defineStore('sds', () => {
       // Cruce con SDS consumables
       const consumable = consumables.value.find(d => d.deviceId === device?.deviceId)
 
-      // Cruce con suministros
-      const suministro = suministros.value
+      // Procesar validación interna POR TÓNER (Serie + Color + Fechas)
+      const procesarToners = (consumable?.toners || []).map(toner => {
+        // 1. Filtrar suministros que coincidan con esta SERIE y este COLOR específico
+        const suministrosDelColor = suministros.value.filter(s => 
+          s.serie === serie && 
+          s.Color?.toUpperCase() === toner.colour?.toUpperCase()
+        )
+
+        // 2. Ordenar usando la función parseFecha (b - a = del más reciente al más antiguo)
+        suministrosDelColor.sort((a, b) => parseFecha(b.fecha_enprega) - parseFecha(a.fecha_enprega))
+        const ultimoEnvioToner = suministrosDelColor[0]
+
+        // 3. Lógica de comparación de fechas para "evaluar_toner"
+        let evaluar_toner = null
+
+        if (ultimoEnvioToner && toner.firstRead) {
+          // Asumimos que firstRead viene de la API en un formato estándar reconocible por JS (ISO)
+          const firstReadDate = new Date(toner.firstRead).getTime()
+          const fechaEntregaDate = parseFecha(ultimoEnvioToner.fecha_enprega)
+
+          if (firstReadDate < fechaEntregaDate) {
+            evaluar_toner = "Tiene toner"
+          } else if (firstReadDate > fechaEntregaDate) {
+            evaluar_toner = "Uso toner"
+          } else {
+            evaluar_toner = "Misma fecha" 
+          }
+        }
+
+        // Devolver el objeto del tóner con la nueva información inyectada
+        return {
+          ...toner,
+          evaluar_toner,
+          status_envio: ultimoEnvioToner?.status_envio || null,
+          ultimo_suministro_fecha: ultimoEnvioToner?.fecha_enprega || null
+        }
+      })
+
+      // Cruce general de último suministro absoluto (usando parseFecha)
+      const suministroGeneral = suministros.value
         .filter(s => s.serie === serie)
-        .sort((a, b) => new Date(b.fecha_enprega) - new Date(a.fecha_enprega))[0]
+        .sort((a, b) => parseFecha(b.fecha_enprega) - parseFecha(a.fecha_enprega))[0]
 
       return {
         // Inventario
@@ -72,19 +123,19 @@ export const useSdsStore = defineStore('sds', () => {
         estado_dispositivo: device ? device.estado_dispositivo : 'SIN_SDS',
         modelo_sds: device?.modelo || null,
 
-        // Toners actuales
-        toners: consumable?.toners || [],
+        // Toners procesados con la validación insertada
+        toners: procesarToners,
 
-        // Último suministro enviado
-        ultimo_suministro: suministro ? {
-          descripcion: suministro.descripcion_suministro,
-          sku: suministro.sku,
-          fecha_entrega: suministro.fecha_enprega,
-          status_envio: suministro.status_envio,
-          color: suministro.Color,
-          guia: suministro.guia,
-          porcentaje: suministro.porcentaje,
-          dias_restantes: suministro.dias_restantes
+        // Último suministro enviado a nivel general
+        ultimo_suministro: suministroGeneral ? {
+          descripcion: suministroGeneral.descripcion_suministro,
+          sku: suministroGeneral.sku,
+          fecha_entrega: suministroGeneral.fecha_enprega,
+          status_envio: suministroGeneral.status_envio,
+          color: suministroGeneral.Color,
+          guia: suministroGeneral.guia,
+          porcentaje: suministroGeneral.porcentaje,
+          dias_restantes: suministroGeneral.dias_restantes
         } : null
       }
     })
