@@ -78,10 +78,8 @@ const estadoToner = computed(() => {
 })
 
 const gaugeColor = computed(() => {
-  if (props.percentLeft <= 10) return '#c62828'
-  if (props.percentLeft <= 25) return '#f57c00'
   const map = {
-    BLACK: '#455a64',
+    BLACK: '#000000',
     CYAN: '#0097a7',
     MAGENTA: '#ad1457',
     YELLOW: '#f9a825'

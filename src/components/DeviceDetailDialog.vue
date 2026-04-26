@@ -12,7 +12,7 @@
         <v-btn icon="mdi-close" variant="text" color="grey" size="small" @click="$emit('update:modelValue', false)" />
       </v-card-title>
 
-      <!-- Tabs -->
+      <!-- Tabs principales -->
       <v-tabs v-model="tab" color="#0066ff" class="px-4" style="border-bottom:1px solid #eee;">
         <v-tab value="info" style="font-size:13px;">Info</v-tab>
         <v-tab value="toners" style="font-size:13px;">Tóners</v-tab>
@@ -30,25 +30,17 @@
           <v-tabs-window-item value="info">
             <v-row>
               <v-col cols="12" md="6">
-                <div class="text-caption font-weight-bold mb-3" style="color:#0066ff; text-transform:uppercase; letter-spacing:0.08em;">
-                  Ubicación
-                </div>
+                <div class="text-caption font-weight-bold mb-3" style="color:#0066ff; text-transform:uppercase; letter-spacing:0.08em;">Ubicación</div>
                 <div v-for="(val, key) in ubicacionInfo" :key="key" class="d-flex mb-2">
                   <span class="text-caption" style="color:#aaa; min-width:90px;">{{ key }}</span>
                   <span class="text-caption font-weight-medium" style="color:#111;">{{ val }}</span>
                 </div>
               </v-col>
               <v-col cols="12" md="6">
-                <div class="text-caption font-weight-bold mb-3" style="color:#0066ff; text-transform:uppercase; letter-spacing:0.08em;">
-                  Estado SDS
-                </div>
+                <div class="text-caption font-weight-bold mb-3" style="color:#0066ff; text-transform:uppercase; letter-spacing:0.08em;">Estado SDS</div>
                 <EstadoBadge :estado="device.estado_dispositivo" class="mb-3" />
-                <div class="text-caption mb-1" style="color:#aaa;">
-                  Último contacto: <span style="color:#333;">{{ device.lastContact || 'N/A' }}</span>
-                </div>
-                <div class="text-caption mb-1" style="color:#aaa;">
-                  Modelo SDS: <span style="color:#333;">{{ device.modelo_sds || 'N/A' }}</span>
-                </div>
+                <div class="text-caption mb-1" style="color:#aaa;">Último contacto: <span style="color:#333;">{{ device.lastContact || 'N/A' }}</span></div>
+                <div class="text-caption mb-1" style="color:#aaa;">Modelo SDS: <span style="color:#333;">{{ device.modelo_sds || 'N/A' }}</span></div>
               </v-col>
             </v-row>
           </v-tabs-window-item>
@@ -82,77 +74,123 @@
 
           <!-- TAB SUMINISTRO -->
           <v-tabs-window-item value="suministro">
-            <div v-if="device.ultimo_suministro">
-              <v-card elevation="0" rounded="xl" border class="pa-4">
-                <v-row dense>
-                  <v-col cols="6" v-for="(val, key) in suministroInfo" :key="key" class="mb-3">
-                    <div class="text-caption" style="color:#aaa;">{{ key }}</div>
-                    <div class="text-body-2 font-weight-medium" style="color:#111;">{{ val }}</div>
-                  </v-col>
-                  <v-col cols="12">
-                    <v-chip
-                      size="small"
-                      rounded="lg"
-                      :color="envioColor(device.ultimo_suministro.status_envio)"
-                      variant="tonal"
+
+            <!-- Sub tabs por color -->
+            <v-tabs
+              v-model="suministroTab"
+              color="#0066ff"
+              density="compact"
+              class="mb-4"
+              style="border-bottom:1px solid #f1f5f9;"
+            >
+              <v-tab
+                v-for="stab in suministroTabs"
+                :key="stab.key"
+                :value="stab.key"
+                style="font-size:12px; min-width:80px;"
+              >
+                <span
+                  class="mr-1"
+                  :style="`width:8px; height:8px; border-radius:50%; background:${stab.dotColor}; display:inline-block; flex-shrink:0;`"
+                />
+                {{ stab.label }}
+              </v-tab>
+            </v-tabs>
+                        <!-- Info firstRead por color -->
+            <v-card
+            v-if="firstReadDelColor"
+            elevation="0"
+            rounded="lg"
+            class="pa-3 mb-4 d-flex align-center gap-3"
+            style="background:#f8fafc; border:1px solid #e2e8f0;"
+            >
+            <v-avatar size="32" color="#e8f0fe" rounded="lg">
+                <v-icon icon="mdi-clock-outline" size="18" color="#0066ff" />
+            </v-avatar>
+            <div>
+                <div class="text-caption" style="color:#94a3b8;">Primera lectura SDS del tóner</div>
+                <div class="text-caption font-weight-bold" style="color:#1e293b;">
+                {{ formatFirstRead(firstReadDelColor) }}
+                </div>
+            </div>
+            </v-card>
+            <v-tabs-window v-model="suministroTab">
+              <v-tabs-window-item
+                v-for="stab in suministroTabs"
+                :key="stab.key"
+                :value="stab.key"
+              >
+                <!-- Timeline historial -->
+                <div v-if="historialPorColor(stab.key).length" style="max-height:380px; overflow-y:auto;">
+                  <v-timeline density="compact" side="end" truncate-line="both">
+                    <v-timeline-item
+                      v-for="(envio, index) in historialPorColor(stab.key)"
+                      :key="index"
+                      :dot-color="envioTimelineColor(envio.status_envio)"
+                      size="x-small"
                     >
-                      {{ device.ultimo_suministro.status_envio }}
-                    </v-chip>
-                  </v-col>
-                </v-row>
-              </v-card>
-            </div>
-            <div v-else class="text-center py-8">
-              <v-icon icon="mdi-package-variant" size="40" color="#ddd" class="mb-2" />
-              <div class="text-caption" style="color:#aaa;">Sin registro de suministros</div>
-            </div>
+                      <v-card
+                        elevation="0"
+                        rounded="lg"
+                        class="pa-3 mb-1"
+                        style="border:1px solid #e2e8f0;"
+                      >
+                        <!-- Fecha y estado -->
+                        <div class="d-flex align-center justify-space-between mb-2">
+                          <div class="d-flex align-center gap-1">
+                            <v-icon icon="mdi-calendar" size="13" color="#94a3b8" />
+                            <span class="text-caption font-weight-bold" style="color:#1e293b;">
+                            {{ envio.fecha_enprega && envio.fecha_enprega.trim() !== '' ? envio.fecha_enprega : 'Sin fecha' }}
+                            </span>
+                          </div>
+                          <v-chip
+                            size="x-small"
+                            rounded="lg"
+                            :color="envioChipColor(envio.status_envio)"
+                            variant="tonal"
+                            style="font-weight:700;"
+                          >
+                            {{ envio.status_envio || 'SIN ESTADO' }}
+                          </v-chip>
+                        </div>
+
+                        <!-- Detalles -->
+                        <v-divider class="mb-2" />
+                        <div class="d-flex flex-column" style="gap:5px;">
+                          <div class="d-flex align-start gap-2">
+                            <span class="text-caption" style="color:#94a3b8; min-width:65px; flex-shrink:0;">SKU</span>
+                            <span class="text-caption font-weight-medium" style="color:#334155;">{{ envio.sku || 'N/A' }}</span>
+                          </div>
+                          <div class="d-flex align-start gap-2">
+                            <span class="text-caption" style="color:#94a3b8; min-width:65px; flex-shrink:0;">Guía</span>
+                            <span class="text-caption font-weight-medium" style="color:#334155;">{{ envio.guia || 'N/A' }}</span>
+                          </div>
+                          <div class="d-flex align-start gap-2 mt-1">
+                            <span class="text-caption" style="color:#94a3b8; min-width:65px; flex-shrink:0;">Dirección</span>
+                            <span class="text-caption font-weight-medium" style="color:#334155; word-break:break-word; line-height:1.4;">{{ envio.direccion || 'N/A' }}</span>
+                          </div>
+                        </div>
+                      </v-card>
+                    </v-timeline-item>
+                  </v-timeline>
+                </div>
+
+                <!-- Sin registros -->
+                <div v-else class="text-center py-8">
+                  <v-icon icon="mdi-package-variant-closed" size="40" color="#ddd" class="mb-2" />
+                  <div class="text-caption" style="color:#aaa;">Sin registros de envío para este color</div>
+                </div>
+
+              </v-tabs-window-item>
+            </v-tabs-window>
+
           </v-tabs-window-item>
 
           <!-- TAB EDITAR -->
           <v-tabs-window-item value="editar">
             <v-expansion-panels variant="accordion" elevation="0">
 
-              <!-- Panel 1: Ubicación -->
-              <v-expansion-panel rounded="xl" class="mb-2" style="border:1px solid #eee;">
-                <v-expansion-panel-title style="font-size:13px; font-weight:600;">
-                  <v-icon icon="mdi-map-marker" class="mr-2" color="#0066ff" size="16" />
-                  Editar datos de ubicación
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <v-row dense class="mt-2">
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="editForm.sede" label="Sede" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="editForm.area" label="Área" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="editForm.sub_area" label="Sub Área" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="editForm.piso" label="Piso" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="editForm.operario" label="Operario" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-select v-model="editForm.status" :items="['PRODUCCION', 'BACKUP']" label="Status" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-select v-model="editForm.zona" :items="['LIMA', 'PROVINCIA']" label="Zona" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="editForm.unidad_negocio" label="Unidad de Negocio" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                  </v-row>
-                  <v-btn color="#0066ff" variant="flat" rounded="lg" size="small" :loading="savingInventario" @click="guardarInventario" class="mt-1">
-                    <v-icon start icon="mdi-content-save" size="16" />
-                    Guardar cambios
-                  </v-btn>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-
-              <!-- Panel 2: Tóner manual -->
+              <!-- Panel 1: Tóner manual -->
               <v-expansion-panel rounded="xl" class="mb-2" style="border:1px solid #eee;">
                 <v-expansion-panel-title style="font-size:13px; font-weight:600;">
                   <v-icon icon="mdi-toner" class="mr-2" color="#f57c00" size="16" />
@@ -180,7 +218,7 @@
                 </v-expansion-panel-text>
               </v-expansion-panel>
 
-              <!-- Panel 3: Suministro -->
+              <!-- Panel 2: Agregar suministro -->
               <v-expansion-panel rounded="xl" style="border:1px solid #eee;">
                 <v-expansion-panel-title style="font-size:13px; font-weight:600;">
                   <v-icon icon="mdi-package-variant-plus" class="mr-2" color="#2e7d32" size="16" />
@@ -189,34 +227,59 @@
                 <v-expansion-panel-text>
                   <v-row dense class="mt-2">
                     <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.descripcion_suministro" label="Descripción" variant="outlined" density="compact" rounded="lg" />
+                      <v-autocomplete
+                        v-model="suministroForm.sku"
+                        :items="skusDisponibles"
+                        label="SKU"
+                        variant="outlined"
+                        density="compact"
+                        rounded="lg"
+                        prepend-inner-icon="mdi-barcode"
+                        clearable
+                        color="#0066ff"
+                      />
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.sku" label="SKU" variant="outlined" density="compact" rounded="lg" />
+                      <v-select
+                        v-model="suministroForm.Color"
+                        :items="coloresDisponibles.map(c => c.key)"
+                        label="Color"
+                        variant="outlined"
+                        density="compact"
+                        rounded="lg"
+                        color="#0066ff"
+                      />
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <v-select v-model="suministroForm.Color" :items="['BLACK', 'CYAN', 'MAGENTA', 'YELLOW']" label="Color" variant="outlined" density="compact" rounded="lg" />
+                      <v-text-field
+                        v-model="suministroForm.fecha_enprega"
+                        label="Fecha de entrega (DD/MM/YYYY)"
+                        variant="outlined"
+                        density="compact"
+                        rounded="lg"
+                        prepend-inner-icon="mdi-calendar"
+                      />
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.guia" label="Guía" variant="outlined" density="compact" rounded="lg" />
+                      <v-text-field
+                        v-model="suministroForm.guia"
+                        label="Guía"
+                        variant="outlined"
+                        density="compact"
+                        rounded="lg"
+                        prepend-inner-icon="mdi-truck-outline"
+                      />
                     </v-col>
                     <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.fecha_enprega" label="Fecha entrega (DD/MM/YYYY)" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.porcentaje" label="Porcentaje (%)" type="number" min="0" max="100" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.dias_restantes" label="Días restantes" type="number" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-select v-model="suministroForm.status_envio" :items="['ATENDIDO', 'PENDIENTE', 'CANCELADO']" label="Status envío" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.contacto" label="Contacto" variant="outlined" density="compact" rounded="lg" />
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                      <v-text-field v-model="suministroForm.atencion" label="Atención" variant="outlined" density="compact" rounded="lg" />
+                      <v-select
+                        v-model="suministroForm.status_envio"
+                        :items="['SOLICITADO', 'ATENDIDO', 'PENDIENTE', 'CANCELADO']"
+                        label="Status envío"
+                        variant="outlined"
+                        density="compact"
+                        rounded="lg"
+                        color="#0066ff"
+                      />
                     </v-col>
                   </v-row>
                   <v-btn color="#2e7d32" variant="flat" rounded="lg" size="small" :loading="savingSuministro" @click="guardarSuministro" class="mt-1">
@@ -232,7 +295,6 @@
         </v-tabs-window>
       </v-card-text>
 
-      <!-- Snackbar -->
       <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="bottom right">
         {{ snackbar.text }}
       </v-snackbar>
@@ -248,14 +310,8 @@ import TonerGauge from './TonerGauge.vue'
 import EstadoBadge from './EstadoBadge.vue'
 
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  },
-  device: {
-    type: Object,
-    default: null
-  }
+  modelValue: { type: Boolean, default: false },
+  device: { type: Object, default: null }
 })
 
 defineEmits(['update:modelValue'])
@@ -263,40 +319,119 @@ defineEmits(['update:modelValue'])
 const store = useSdsStore()
 
 const tab = ref('info')
-const savingInventario = ref(false)
+const suministroTab = ref('BLACK')
 const savingToner = ref(false)
 const savingSuministro = ref(false)
 const snackbar = ref({ show: false, text: '', color: 'success' })
 
-const editForm = ref({})
 const tonerManualForm = ref({ BLACK: null, CYAN: null, MAGENTA: null, YELLOW: null })
 const suministroForm = ref({
-  descripcion_suministro: '', sku: '', Color: 'BLACK', guia: '',
-  fecha_enprega: '', porcentaje: null, dias_restantes: null,
-  status_envio: 'ATENDIDO', contacto: '', atencion: 'BOLSA'
+  sku: '',
+  Color: 'BLACK',
+  fecha_enprega: '',
+  guia: '',
+  status_envio: 'SOLICITADO'
 })
 
-const coloresDisponibles = [
-  { key: 'BLACK', label: 'Negro' },
-  { key: 'CYAN', label: 'Cyan' },
-  { key: 'MAGENTA', label: 'Magenta' },
-  { key: 'YELLOW', label: 'Amarillo' }
-]
+// --- Colores disponibles según tipo ---
+const coloresDisponibles = computed(() => {
+  const esColor = props.device?.tipo === 'COLOR'
+  if (esColor) {
+    return [
+      { key: 'BLACK', label: 'Negro' },
+      { key: 'CYAN', label: 'Cyan' },
+      { key: 'MAGENTA', label: 'Magenta' },
+      { key: 'YELLOW', label: 'Amarillo' }
+    ]
+  }
+  return [{ key: 'BLACK', label: 'Negro' }]
+})
 
-// Resetear formularios cuando cambia el device
+// --- Sub tabs del historial de suministros ---
+const suministroTabs = computed(() => {
+  const esColor = props.device?.tipo === 'COLOR'
+  const tabs = esColor
+    ? [
+        { key: 'BLACK', label: 'Negro', dotColor: '#000000' },
+        { key: 'CYAN', label: 'Cyan', dotColor: '#0097a7' },
+        { key: 'MAGENTA', label: 'Magenta', dotColor: '#ad1457' },
+        { key: 'YELLOW', label: 'Amarillo', dotColor: '#f9a825' },
+      ]
+    : [
+        { key: 'BLACK', label: 'Negro', dotColor: '#000000' },
+      ]
+
+  // Agregar tab de repuestos si tiene registros
+  const tieneRepuestos = store.suministros.some(s => {
+    if (s.serie !== props.device?.serie) return false
+    const c = s.Color?.toUpperCase()
+    return !['BLACK', 'CYAN', 'MAGENTA', 'YELLOW'].includes(c)
+  })
+
+  if (tieneRepuestos) {
+    tabs.push({ key: 'REPUESTO', label: 'Repuestos', dotColor: '#64748b' })
+  }
+
+  return tabs
+})
+
+// --- Historial filtrado por serie y color, ordenado por fecha desc ---
+function historialPorColor(colorKey) {
+  return store.suministros
+    .filter(s => {
+      if (s.serie !== props.device?.serie) return false
+      const c = s.Color?.toUpperCase()
+      if (colorKey === 'REPUESTO') {
+        return !['BLACK', 'CYAN', 'MAGENTA', 'YELLOW'].includes(c)
+      }
+      return c === colorKey
+    })
+    .sort((a, b) => {
+      const parseFecha = (f) => {
+        if (!f || f.trim() === '') return Infinity 
+        const parts = f.split('/')
+        if (parts.length !== 3) return Infinity
+        const [d, m, y] = parts
+        const fecha = new Date(`${y}-${m}-${d}`).getTime()
+        return isNaN(fecha) ? Infinity : fecha
+      }
+      return parseFecha(b.fecha_enprega) - parseFecha(a.fecha_enprega)
+    })
+}
+
+// --- Colores para el timeline ---
+function envioTimelineColor(status) {
+  const map = {
+    ATENDIDO: '#2e7d32',
+    PENDIENTE: '#f57c00',
+    CANCELADO: '#c62828',
+    SOLICITADO: '#0066ff',
+    TRANSITO: '#f57c00'
+  }
+  return map[status?.toUpperCase()] || '#94a3b8'
+}
+
+function envioChipColor(status) {
+  const map = {
+    ATENDIDO: 'success',
+    PENDIENTE: 'warning',
+    CANCELADO: 'error',
+    SOLICITADO: 'info',
+    TRANSITO: 'warning'
+  }
+  return map[status?.toUpperCase()] || 'grey'
+}
+
+// --- SKUs disponibles ---
+const skusDisponibles = computed(() =>
+  [...new Set(store.suministros.map(s => s.sku).filter(Boolean))].sort()
+)
+
+// --- Watch device ---
 watch(() => props.device, (newDevice) => {
   if (!newDevice) return
   tab.value = 'info'
-  editForm.value = {
-    sede: newDevice.sede,
-    area: newDevice.area,
-    sub_area: newDevice.sub_area,
-    piso: newDevice.piso,
-    operario: newDevice.operario,
-    status: newDevice.status,
-    zona: newDevice.zona,
-    unidad_negocio: newDevice.unidad_negocio
-  }
+  suministroTab.value = 'BLACK'
   tonerManualForm.value = {
     BLACK: newDevice.toners_manual?.BLACK || null,
     CYAN: newDevice.toners_manual?.CYAN || null,
@@ -304,12 +439,40 @@ watch(() => props.device, (newDevice) => {
     YELLOW: newDevice.toners_manual?.YELLOW || null
   }
   suministroForm.value = {
-    descripcion_suministro: '', sku: '', Color: 'BLACK', guia: '',
-    fecha_enprega: '', porcentaje: null, dias_restantes: null,
-    status_envio: 'ATENDIDO', contacto: '', atencion: 'BOLSA'
+    sku: '',
+    Color: 'BLACK',
+    fecha_enprega: '',
+    guia: '',
+    status_envio: 'SOLICITADO'
   }
 })
 
+// firstRead del tóner activo según el sub-tab seleccionado
+const firstReadDelColor = computed(() => {
+  if (!props.device?.toners?.length) return null
+  const toner = props.device.toners.find(
+    t => t.colour?.toUpperCase() === suministroTab.value
+  )
+  return toner?.firstRead || null
+})
+
+function formatFirstRead(isoDate) {
+  if (!isoDate) return 'N/A'
+  try {
+    const date = new Date(isoDate)
+    return date.toLocaleDateString('es-PE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return isoDate
+  }
+}
+
+// --- Info ubicación ---
 const ubicacionInfo = computed(() => {
   if (!props.device) return {}
   return {
@@ -324,36 +487,7 @@ const ubicacionInfo = computed(() => {
   }
 })
 
-const suministroInfo = computed(() => {
-  if (!props.device?.ultimo_suministro) return {}
-  const s = props.device.ultimo_suministro
-  return {
-    'Descripción': s.descripcion,
-    'SKU': s.sku,
-    'Color': s.color,
-    'Guía': s.guia,
-    'Fecha entrega': s.fecha_entrega,
-    'Porcentaje': `${s.porcentaje}%`,
-    'Días restantes': s.dias_restantes,
-  }
-})
-
-function envioColor(status) {
-  const map = { ATENDIDO: 'success', PENDIENTE: 'warning', CANCELADO: 'error' }
-  return map[status] || 'grey'
-}
-
-async function guardarInventario() {
-  savingInventario.value = true
-  try {
-    const nuevoInventario = store.inventario.map(item =>
-      item.serie === props.device.serie ? { ...item, ...editForm.value } : item
-    )
-    const ok = await store.updateJson('inventario.json', nuevoInventario)
-    snackbar.value = { show: true, text: ok ? 'Inventario actualizado' : 'Error al guardar', color: ok ? 'success' : 'error' }
-  } finally { savingInventario.value = false }
-}
-
+// --- Guardar tóner manual ---
 async function guardarTonerManual() {
   savingToner.value = true
   try {
@@ -365,23 +499,40 @@ async function guardarTonerManual() {
   } finally { savingToner.value = false }
 }
 
+// --- Guardar suministro ---
 async function guardarSuministro() {
+  if (!suministroForm.value.sku || !suministroForm.value.fecha_enprega) {
+    snackbar.value = { show: true, text: 'SKU y fecha son requeridos', color: 'warning' }
+    return
+  }
   savingSuministro.value = true
   try {
     const hoy = new Date().toLocaleDateString('es-PE')
+    const skuInfo = store.suministros.find(s => s.sku === suministroForm.value.sku)
     const nuevoSuministro = {
-      ...suministroForm.value,
-      serie: props.device.serie,
-      modelo: props.device.modelo_completo,
+      atencion: 'BOLSA',
       cliente: props.device.unidad_negocio,
       direccion: `${props.device.sede} - ${props.device.area}`,
+      contacto: '',
       fecha_registro: hoy,
       tipo: 'SUMINISTROS',
-      cantidad: 1
+      modelo: props.device.modelo_completo,
+      serie: props.device.serie,
+      porcentaje: null,
+      dias_restantes: null,
+      cantidad: 1,
+      descripcion_suministro: skuInfo?.descripcion_suministro || suministroForm.value.sku,
+      sku: suministroForm.value.sku,
+      guia: suministroForm.value.guia,
+      fecha_enprega: suministroForm.value.fecha_enprega,
+      status_envio: suministroForm.value.status_envio,
+      Color: suministroForm.value.Color
     }
     const ok = await store.updateJson('suministros.json', [nuevoSuministro, ...store.suministros])
     snackbar.value = { show: true, text: ok ? 'Suministro agregado' : 'Error al guardar', color: ok ? 'success' : 'error' }
-    if (ok) suministroForm.value = { descripcion_suministro: '', sku: '', Color: 'BLACK', guia: '', fecha_enprega: '', porcentaje: null, dias_restantes: null, status_envio: 'ATENDIDO', contacto: '', atencion: 'BOLETA' }
+    if (ok) {
+      suministroForm.value = { sku: '', Color: 'BLACK', fecha_enprega: '', guia: '', status_envio: 'SOLICITADO' }
+    }
   } finally { savingSuministro.value = false }
 }
 </script>

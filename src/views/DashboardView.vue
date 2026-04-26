@@ -207,7 +207,7 @@
             </template>
 
             <template #item.toners="{ item }">
-              <div class="d-flex gap-1 align-center py-1" v-if="item.toners && item.toners.length">
+              <div class="d-flex gap-1 align-center py-1" style="gap:8px;" v-if="item.toners && item.toners.length">
                 <TonerGauge
                   v-for="toner in item.toners"
                   :key="toner.index"

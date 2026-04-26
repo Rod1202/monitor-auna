@@ -60,6 +60,7 @@ export default async (req) => {
           daysLeft: c.daysLeft,
           pagesLeft: c.pagesLeft,
           serialNumber: c.serialNumber,
+          firstRead: c.firstRead,
           lastRead: c.lastRead,
           daysMonitored: c.daysMonitored,
           estado_toner: calcularEstadoToner(c.percentLeft)
