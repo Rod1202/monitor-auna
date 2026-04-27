@@ -1,9 +1,14 @@
 <template>
-  <v-navigation-drawer permanent width="200" style="background:#fff; border-right:1px solid #eee;">
-
+  <v-navigation-drawer
+    v-model="drawer"
+    :permanent="lgAndUp"
+    :temporary="!lgAndUp"
+    width="200"
+    style="background:#fff; border-right:1px solid #eee;"
+  >
     <!-- Logo -->
     <div class="pa-2 d-flex align-center justify-center mb-1">
-      <img src="/logoMT.avif" style="width:140px; height:140px; object-fit:contain;" />
+      <img src="/logoMT.avif" style="width:120px; height:120px; object-fit:contain;" />
     </div>
 
     <v-divider class="mb-2" />
@@ -35,8 +40,6 @@
     <template #append>
       <div class="pa-3">
         <v-divider class="mb-3" />
-
-        <!-- Botón salir -->
         <v-btn
           block
           variant="tonal"
@@ -49,22 +52,20 @@
           <v-icon start icon="mdi-logout" size="16" />
           Cerrar sesión
         </v-btn>
-
-        <!-- Créditos -->
         <div class="text-center mt-1">
           <span style="font-size:9px; font-weight:600; color:#888; letter-spacing:0.04em;">
             Power by Rodrigo Carbonel ®
           </span>
         </div>
-
       </div>
     </template>
-
   </v-navigation-drawer>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 
 defineProps({
   activeRoute: {
@@ -74,17 +75,14 @@ defineProps({
 })
 
 const router = useRouter()
+const { lgAndUp } = useDisplay()
+const drawer = ref(true)
 
 function logout() {
   sessionStorage.removeItem('authenticated')
   sessionStorage.removeItem('app_pin')
   router.push('/')
 }
-</script>
 
-<style scoped>
-.credits-wrap {
-  background: #f0f4ff;
-  border-radius: 8px;
-}
-</style>
+defineExpose({ drawer })
+</script>
