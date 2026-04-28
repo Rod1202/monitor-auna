@@ -4,19 +4,14 @@
     <AppSidebar ref="sidebarRef" active-route="dashboard" />
 
     <v-main style="background:#f1f5f9;">
-      <div 
-        class="pa-3 pa-md-6 d-flex flex-column flex-grow-1" 
+      <div
+        class="pa-3 pa-md-6 d-flex flex-column flex-grow-1"
         :style="lgAndUp ? 'height: 100vh; min-height: 0; overflow: hidden;' : 'min-height: 100vh;'"
       >
 
+        <!-- Top bar -->
         <div class="d-flex align-center mb-4 gap-2 flex-shrink-0">
-          <v-btn
-            v-if="!lgAndUp"
-            icon="mdi-menu"
-            variant="text"
-            size="small"
-            @click="sidebarRef.drawer = !sidebarRef.drawer"
-          />
+          <v-btn v-if="!lgAndUp" icon="mdi-menu" variant="text" size="small" @click="sidebarRef.drawer = !sidebarRef.drawer" />
           <v-text-field
             v-model="search"
             prepend-inner-icon="mdi-magnify"
@@ -32,6 +27,7 @@
           <div class="text-caption font-weight-medium d-none d-sm-block" style="color:#64748b;" v-if="store.lastUpdate">
             Actualizado: {{ formatTime(store.lastUpdate) }}
           </div>
+
           <v-btn
             icon="mdi-refresh"
             :loading="store.loading"
@@ -43,6 +39,7 @@
           />
         </div>
 
+        <!-- Stat Cards — cambian con filtros de sección -->
         <v-row class="mb-4 flex-shrink-0" dense>
           <v-col v-for="stat in statCards" :key="stat.label" cols="6" sm="4" md="2">
             <StatCard
@@ -50,24 +47,18 @@
               :value="stat.value"
               :text-color="stat.textColor"
               :is-active="filtroEstadoCard === stat.filtro"
-              :total-value="store.stats.total"
+              :total-value="statCards[0].value"
               :icon="stat.icon"
               @click="toggleFiltroCard(stat.filtro)"
             />
           </v-col>
         </v-row>
 
-        <v-card
-          elevation="0"
-          rounded="xl"
-          class="pa-3 pa-md-5 mb-4 flex-shrink-0"
-          style="background:#fff; border:1px solid #e2e8f0;"
-        >
+        <!-- Filtros -->
+        <v-card elevation="0" rounded="xl" class="pa-3 pa-md-5 mb-4 flex-shrink-0" style="background:#fff; border:1px solid #e2e8f0;">
           <div class="d-flex align-center mb-3">
             <v-icon icon="mdi-filter-variant" size="18" color="#64748b" class="mr-2" />
-            <span class="font-weight-bold" style="color:#334155; letter-spacing:0.05em; text-transform:uppercase; font-size:11px;">
-              Filtros de Búsqueda
-            </span>
+            <span class="font-weight-bold" style="color:#334155; letter-spacing:0.05em; text-transform:uppercase; font-size:11px;">Filtros de Búsqueda</span>
           </div>
           <v-row dense align="center">
             <v-col cols="12" sm="6" md="2">
@@ -91,15 +82,73 @@
                 Limpiar
               </v-btn>
             </v-col>
+
+            <!-- Filtro días restantes -->
+            <v-col cols="12" sm="6" md="3" class="mt-2">
+              <div class="text-caption font-weight-medium mb-1" style="color:#64748b;">
+                Días restantes tóner: <strong style="color:#0066ff;">{{ filtroDias === null ? 'Todos' : `≤ ${filtroDias} días` }}</strong>
+              </div>
+              <v-slider
+                v-model="filtroDias"
+                :min="0"
+                :max="365"
+                :step="5"
+                color="#0066ff"
+                track-color="#e2e8f0"
+                hide-details
+                thumb-label
+                density="compact"
+                @update:model-value="val => filtroDias = val === 365 ? null : val"
+              >
+                <template #prepend>
+                  <v-icon icon="mdi-calendar-clock" size="16" color="#94a3b8" />
+                </template>
+              </v-slider>
+            </v-col>
+
+            <!-- Filtro porcentaje -->
+            <v-col cols="12" sm="6" md="3" class="mt-2">
+              <div class="text-caption font-weight-medium mb-1" style="color:#64748b;">
+                Porcentaje tóner: <strong style="color:#0066ff;">{{ filtroPercent === null ? 'Todos' : `≤ ${filtroPercent}%` }}</strong>
+              </div>
+              <v-slider
+                v-model="filtroPercent"
+                :min="0"
+                :max="100"
+                :step="5"
+                color="#0066ff"
+                track-color="#e2e8f0"
+                hide-details
+                thumb-label
+                density="compact"
+                @update:model-value="val => filtroPercent = val === 100 ? null : val"
+              >
+                <template #prepend>
+                  <v-icon icon="mdi-percent" size="16" color="#94a3b8" />
+                </template>
+              </v-slider>
+            </v-col>
+            <!-- Agrega después del slider de porcentaje -->
+            <v-col cols="12" sm="6" md="3" class="mt-2 d-flex align-end">
+              <v-btn
+                color="#2e7d32"
+                variant="tonal"
+                rounded="lg"
+                size="default"
+                block
+                class="text-none font-weight-bold"
+                @click="exportarCSV"
+              >
+                <v-icon start icon="mdi-download" size="16" />
+                Exportar
+              </v-btn>
+            </v-col>
+
           </v-row>
         </v-card>
 
-        <v-card
-          elevation="0"
-          rounded="xl"
-          class="d-flex flex-column flex-grow-1"
-          style="background:#fff; border:1px solid #e2e8f0; min-height:0; overflow:hidden;"
-        >
+        <!-- Tabla -->
+        <v-card elevation="0" rounded="xl" class="d-flex flex-column flex-grow-1" style="background:#fff; border:1px solid #e2e8f0; min-height:0; overflow:hidden;">
           <v-data-table
             :headers="headers"
             :items="filteredData"
@@ -203,12 +252,14 @@ const { lgAndUp } = useDisplay()
 const sidebarRef = ref(null)
 
 const search = ref('')
-const filtroOperario = ref(null) // Nuevo filtro
+const filtroOperario = ref(null)
 const filtroZona = ref(null)
 const filtroTipo = ref(null)
 const filtroStatus = ref(null)
 const filtroSede = ref(null)
 const filtroEstadoCard = ref(null)
+const filtroDias = ref(null)
+const filtroPercent = ref(null)
 const dialog = ref(false)
 const selectedDevice = ref(null)
 
@@ -224,21 +275,27 @@ const headers = [
   { title: 'Acción', key: 'accion_requerida', align: 'center', sortable: false },
 ]
 
-const filterDataForOptions = (skipKey = null) => {
+// Función base de filtrado sin filtro de cards
+const filterBase = (skipKey = null) => {
   return store.combinedData.filter(item => {
-    // 1. Filtro por Tarjetas (Mantiene su funcionalidad)
-    if (filtroEstadoCard.value === 'CRITICO') {
-      if (!item.toners?.some(t => t.estado_toner === 'CRITICO')) return false
-    } else if (filtroEstadoCard.value && item.estado_dispositivo !== filtroEstadoCard.value) return false
-    
-    // 2. Filtros de Selects
     if (skipKey !== 'operario' && filtroOperario.value && item.operario !== filtroOperario.value) return false
     if (skipKey !== 'zona' && filtroZona.value && item.zona !== filtroZona.value) return false
     if (skipKey !== 'tipo' && filtroTipo.value && item.tipo !== filtroTipo.value) return false
     if (skipKey !== 'status' && filtroStatus.value && item.status !== filtroStatus.value) return false
     if (skipKey !== 'sede' && filtroSede.value && item.sede !== filtroSede.value) return false
-    
-    // 3. Filtro de Búsqueda (Ahora solo Serie y Modelo)
+
+    // Filtro días restantes — aplica si algún tóner tiene daysLeft <= valor
+    if (filtroDias.value !== null) {
+      const tieneToner = item.toners?.some(t => t.daysLeft !== null && t.daysLeft <= filtroDias.value)
+      if (!tieneToner) return false
+    }
+
+    // Filtro porcentaje — aplica si algún tóner tiene percentLeft <= valor
+    if (filtroPercent.value !== null) {
+      const tieneToner = item.toners?.some(t => t.percentLeft !== null && t.percentLeft <= filtroPercent.value)
+      if (!tieneToner) return false
+    }
+
     if (search.value) {
       const q = search.value.toLowerCase()
       return (
@@ -250,23 +307,37 @@ const filterDataForOptions = (skipKey = null) => {
   })
 }
 
-const filteredData = computed(() => filterDataForOptions(null))
+// Data filtrada incluyendo filtro de cards
+const filteredData = computed(() => {
+  return filterBase(null).filter(item => {
+    if (filtroEstadoCard.value === 'CRITICO') {
+      return item.toners?.some(t => t.estado_toner === 'CRITICO')
+    } else if (filtroEstadoCard.value) {
+      return item.estado_dispositivo === filtroEstadoCard.value
+    }
+    return true
+  })
+})
 
-// Opciones computadas para los selects
-const sedeOptions = computed(() => [...new Set(filterDataForOptions('sede').map(d => d.sede).filter(Boolean))].sort())
-const zonaOptions = computed(() => [...new Set(filterDataForOptions('zona').map(d => d.zona).filter(Boolean))].sort())
-const tipoOptions = computed(() => [...new Set(filterDataForOptions('tipo').map(d => d.tipo).filter(Boolean))].sort())
-const statusOptions = computed(() => [...new Set(filterDataForOptions('status').map(d => d.status).filter(Boolean))].sort())
-const operarioOptions = computed(() => [...new Set(filterDataForOptions('operario').map(d => d.operario).filter(Boolean))].sort()) // Nuevo options
+// Stats calculadas sobre filterBase (sin filtro de cards)
+// Para que los números de las cards reflejen los filtros de sección
+const baseData = computed(() => filterBase(null))
 
 const statCards = computed(() => [
-  { label: 'Total', value: store.stats.total, textColor: '#0066ff', filtro: null, icon: 'mdi-printer-outline' },
-  { label: 'Sincronizados', value: store.stats.sincronizados, textColor: '#2e7d32', filtro: 'SINCRONIZADO', icon: 'mdi-cloud-check-outline' },
-  { label: 'Stand By', value: store.stats.standby, textColor: '#f57c00', filtro: 'STAND_BY', icon: 'mdi-pause-circle-outline' },
-  { label: 'Desincronizados', value: store.stats.desincronizados, textColor: '#c62828', filtro: 'DESINCRONIZADO', icon: 'mdi-cloud-off-outline' },
-  { label: 'Sin SDS', value: store.stats.sinSds, textColor: '#555', filtro: 'SIN_SDS', icon: 'mdi-laptop-off' },
-  { label: 'Críticos', value: store.stats.criticos, textColor: '#c62828', filtro: 'CRITICO', icon: 'mdi-alert-circle-outline' },
+  { label: 'Total', value: baseData.value.length, textColor: '#0066ff', filtro: null, icon: 'mdi-printer-outline' },
+  { label: 'Sincronizados', value: baseData.value.filter(d => d.estado_dispositivo === 'SINCRONIZADO').length, textColor: '#2e7d32', filtro: 'SINCRONIZADO', icon: 'mdi-cloud-check-outline' },
+  { label: 'Stand By', value: baseData.value.filter(d => d.estado_dispositivo === 'STAND_BY').length, textColor: '#f57c00', filtro: 'STAND_BY', icon: 'mdi-pause-circle-outline' },
+  { label: 'Desincronizados', value: baseData.value.filter(d => d.estado_dispositivo === 'DESINCRONIZADO').length, textColor: '#c62828', filtro: 'DESINCRONIZADO', icon: 'mdi-cloud-off-outline' },
+  { label: 'Sin SDS', value: baseData.value.filter(d => d.estado_dispositivo === 'SIN_SDS').length, textColor: '#555', filtro: 'SIN_SDS', icon: 'mdi-laptop-off' },
+  { label: 'Críticos', value: baseData.value.filter(d => d.toners?.some(t => t.estado_toner === 'CRITICO')).length, textColor: '#c62828', filtro: 'CRITICO', icon: 'mdi-alert-circle-outline' },
 ])
+
+// Opciones de filtros
+const sedeOptions = computed(() => [...new Set(filterBase('sede').map(d => d.sede).filter(Boolean))].sort())
+const zonaOptions = computed(() => [...new Set(filterBase('zona').map(d => d.zona).filter(Boolean))].sort())
+const tipoOptions = computed(() => [...new Set(filterBase('tipo').map(d => d.tipo).filter(Boolean))].sort())
+const statusOptions = computed(() => [...new Set(filterBase('status').map(d => d.status).filter(Boolean))].sort())
+const operarioOptions = computed(() => [...new Set(filterBase('operario').map(d => d.operario).filter(Boolean))].sort())
 
 function toggleFiltroCard(filtro) {
   filtroEstadoCard.value = filtroEstadoCard.value === filtro ? null : filtro
@@ -293,7 +364,87 @@ function limpiarFiltros() {
   filtroStatus.value = null
   filtroSede.value = null
   filtroEstadoCard.value = null
+  filtroDias.value = null
+  filtroPercent.value = null
   search.value = ''
+}
+
+// Exportar CSV con toda la data filtrada
+function exportarCSV() {
+  const colsBase = [
+    { key: 'sede', label: 'Sede' },
+    { key: 'zona', label: 'Zona' },
+    { key: 'area', label: 'Área' },
+    { key: 'sub_area', label: 'Sub Área' },
+    { key: 'operario', label: 'Operario' },
+    { key: 'serie', label: 'Serie' },
+    { key: 'modelo_completo', label: 'Modelo' },
+    { key: 'tipo', label: 'Tipo' },
+    { key: 'status', label: 'Status' },
+    { key: 'estado_dispositivo', label: 'Estado SDS' },
+    { key: 'lastContact', label: 'Último Contacto SDS' },
+  ]
+
+  const colsToner = [
+    'Color Tóner',
+    'SKU Tóner',
+    'Porcentaje (%)',
+    'Días Restantes',
+    'Estado Tóner',
+  ]
+
+  const colsSuministro = [
+    'Último Envío Fecha',
+    'Último Envío Status',
+  ]
+
+  const headerRow = [
+    ...colsBase.map(c => c.label),
+    ...colsToner,
+    ...colsSuministro
+  ].join(';')
+
+  const rows = []
+
+  filteredData.value.forEach(item => {
+    const base = colsBase.map(c => `"${item[c.key] || ''}"`)
+
+    const sumFecha = item.ultimo_suministro?.fecha_entrega || ''
+    const sumStatus = item.ultimo_suministro?.status_envio || ''
+
+    if (item.toners && item.toners.length) {
+      // Una fila por cada color de tóner
+      item.toners.forEach(toner => {
+        const tonerCols = [
+          `"${toner.colour || ''}"`,
+          `"${toner.sku || ''}"`,
+          `"${toner.percentLeft ?? ''}"`,
+          `"${toner.daysLeft ?? ''}"`,
+          `"${toner.estado_toner || ''}"`,
+        ]
+        const sumCols = [
+          `"${sumFecha}"`,
+          `"${sumStatus}"`,
+        ]
+        rows.push([...base, ...tonerCols, ...sumCols].join(';'))
+      })
+    } else {
+      // Sin tóners — una fila con datos vacíos
+      const tonerCols = ['"—"', '"—"', '"—"', '"—"', '"—"']
+      const sumCols = [`"${sumFecha}"`, `"${sumStatus}"`]
+      rows.push([...base, ...tonerCols, ...sumCols].join(';'))
+    }
+  })
+
+  const csv = [headerRow, ...rows].join('\n')
+  const BOM = '\uFEFF'
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `dashboard_${new Date().toLocaleDateString('es-PE').replace(/\//g, '-')}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 let interval = null
@@ -318,23 +469,17 @@ onUnmounted(() => { if (interval) clearInterval(interval) })
 :deep(.v-data-table td) {
   border-bottom: 1px solid #f1f5f9 !important;
 }
-
-/* Configuramos la tabla para que ocupe todo el espacio sobrante */
 .custom-table {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
-
-/* El wrapper interno (donde van las filas) se expande y tiene los scrolls */
 :deep(.custom-table .v-table__wrapper) {
   flex-grow: 1 !important;
-  overflow-y: auto !important; /* Scroll vertical SOLO para las filas */
-  overflow-x: auto !important; /* Scroll horizontal en móviles */
+  overflow-y: auto !important;
+  overflow-x: auto !important;
   min-height: 0;
 }
-
-/* El pie de tabla (paginación) se mantiene estático abajo */
 :deep(.custom-table .v-data-table-footer) {
   flex-shrink: 0 !important;
   border-top: 1px solid #e2e8f0 !important;
