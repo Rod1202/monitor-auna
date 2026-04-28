@@ -8270,21 +8270,5 @@
     "modelo_completo": "HP LASERJET PRO MFP M426FDW",
     "tamanio": "A4",
     "impresion": "LASER"
-  },
-  {
-    "unidad_negocio": "CLINICA VALLE SUR S.A.",
-    "zona": "PROVINCIA",
-    "sede": "CLINICA VALLE SUR",
-    "area": "MODULO 2-3",
-    "sub_area": "MODULO 2-3",
-    "piso": "1",
-    "operario": "CESAR G.",
-    "serie": "BRDSNDJ8R8",
-    "status": "PRODUCCION",
-    "tipo": "MONOCROMATICA",
-    "funcionalidad": "MULTIFUNCIONAL",
-    "modelo_completo": "HP LASERJET PRO MFP M428FDW",
-    "tamanio": "A4",
-    "impresion": "LASER"
   }
 ]
