@@ -96,6 +96,7 @@ async function handleLogin() {
     if (data.success) {
       sessionStorage.setItem('authenticated', 'true')
       sessionStorage.setItem('app_pin', pin.value)
+      sessionStorage.setItem('role', data.role)
       router.push('/dashboard')
     } else {
       error.value = true

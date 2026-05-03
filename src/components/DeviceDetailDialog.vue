@@ -17,7 +17,7 @@
         <v-tab value="info" style="font-size:13px;">Info</v-tab>
         <v-tab value="toners" style="font-size:13px;">Tóners</v-tab>
         <v-tab value="suministro" style="font-size:13px;">Suministro</v-tab>
-        <v-tab value="editar" style="font-size:13px;">
+        <v-tab v-if="isAdmin()" value="editar" style="font-size:13px;">
           <v-icon start icon="mdi-pencil" size="14" />
           Editar
         </v-tab>
@@ -187,7 +187,7 @@
           </v-tabs-window-item>
 
           <!-- TAB EDITAR -->
-          <v-tabs-window-item value="editar">
+          <v-tabs-window-item v-if="isAdmin()" value="editar">
             <v-expansion-panels variant="accordion" elevation="0">
 
               <!-- Panel 1: Tóner manual -->
@@ -309,6 +309,8 @@ import { useSdsStore } from '../stores/sdsStore'
 import TonerGauge from './TonerGauge.vue'
 import EstadoBadge from './EstadoBadge.vue'
 
+import { useRole } from '../composables/useRole.js'
+const { isAdmin } = useRole()
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   device: { type: Object, default: null }

@@ -9,8 +9,11 @@ export default async (req) => {
   try {
     const { pin, archivo, datos } = await req.json()
 
-    // Validar PIN
-    if (pin !== process.env.APP_PIN) {
+    const adminPin = process.env.APP_PIN
+    const viewerPin = process.env.APP_PIN_VIEWER
+
+    const pinValido = pin === adminPin || (viewerPin && pin === viewerPin)
+    if (!pinValido) {
       return new Response(JSON.stringify({ error: 'No autorizado' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }

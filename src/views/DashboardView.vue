@@ -41,7 +41,7 @@
 
         <!-- Stat Cards — cambian con filtros de sección -->
         <v-row class="mb-4 flex-shrink-0" dense>
-          <v-col v-for="stat in statCards" :key="stat.label" cols="6" sm="4" md="2">
+          <v-col v-for="stat in statCards" :key="stat.label" cols="6" sm="4" md="2" v-show="stat.filtro !== 'CRITICO' || isAdmin()">
             <StatCard
               :label="stat.label"
               :value="stat.value"
@@ -84,7 +84,7 @@
             </v-col>
 
             <!-- Filtro días restantes -->
-            <v-col cols="12" sm="6" md="3" class="mt-2">
+            <v-col v-if="isAdmin()" cols="12" sm="6" md="3" class="mt-2">
               <div class="text-caption font-weight-medium mb-1" style="color:#64748b;">
                 Días restantes tóner: <strong style="color:#0066ff;">{{ filtroDias === null ? 'Todos' : `≤ ${filtroDias} días` }}</strong>
               </div>
@@ -107,7 +107,7 @@
             </v-col>
 
             <!-- Filtro porcentaje -->
-            <v-col cols="12" sm="6" md="3" class="mt-2">
+            <v-col v-if="isAdmin()" cols="12" sm="6" md="3" class="mt-2">
               <div class="text-caption font-weight-medium mb-1" style="color:#64748b;">
                 Porcentaje tóner: <strong style="color:#0066ff;">{{ filtroPercent === null ? 'Todos' : `≤ ${filtroPercent}%` }}</strong>
               </div>
@@ -129,7 +129,7 @@
               </v-slider>
             </v-col>
             <!-- Agrega después del slider de porcentaje -->
-            <v-col cols="12" sm="6" md="3" class="mt-2 d-flex align-end">
+            <v-col v-if="isAdmin()" cols="12" sm="6" md="3" class="mt-2 d-flex align-end">
               <v-btn
                 color="#2e7d32"
                 variant="tonal"
@@ -246,6 +246,9 @@ import TonerGauge from '../components/TonerGauge.vue'
 import EstadoBadge from '../components/EstadoBadge.vue'
 import StatusChip from '../components/StatusChip.vue'
 import DeviceDetailDialog from '../components/DeviceDetailDialog.vue'
+
+import { useRole } from '../composables/useRole.js'
+const { isAdmin } = useRole()
 
 const store = useSdsStore()
 const { lgAndUp } = useDisplay()

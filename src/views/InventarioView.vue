@@ -129,7 +129,7 @@
             </template>
 
             <template #item.actions="{ item }">
-              <div class="d-flex justify-center" style="gap:4px;">
+              <div v-if="isAdmin()" class="d-flex justify-center" style="gap:4px;">
                 <v-btn size="small" variant="tonal" color="#0066ff" rounded="lg" icon="mdi-pencil-outline" @click.stop="abrirEditar(item)" />
                 <v-btn size="small" variant="tonal" color="#f57c00" rounded="lg" icon="mdi-swap-horizontal" @click.stop="abrirReemplazar(item)" />
                 <v-btn size="small" variant="tonal" color="#c62828" rounded="lg" icon="mdi-archive-arrow-down-outline" @click.stop="confirmarRetiro(item)" />
@@ -250,6 +250,8 @@ import { useDisplay } from 'vuetify'
 import { useSdsStore } from '../stores/sdsStore'
 import AppSidebar from '../components/AppSidebar.vue'
 import StatusChip from '../components/StatusChip.vue'
+import { useRole } from '../composables/useRole.js'
+const { isAdmin } = useRole()
 
 const store = useSdsStore()
 const { lgAndUp } = useDisplay()

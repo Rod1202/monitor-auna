@@ -154,25 +154,30 @@ export const useSdsStore = defineStore('sds', () => {
   }))
 
   // --- Actualizar JSON via GitHub API ---
-  async function updateJson(archivo, datos) {
-    try {
-      const pin = sessionStorage.getItem('app_pin')
-      const response = await fetch('/.netlify/functions/update-json', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, archivo, datos })
-      })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error)
+async function updateJson(archivo, datos) {
+  try {
+    const pin = sessionStorage.getItem('app_pin')
+    const response = await fetch('/.netlify/functions/update-json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin, archivo, datos })
+    })
+    const result = await response.json()
+    if (!result.success) throw new Error(result.error)
 
-      // Recargar datos locales inmediatamente
-      await loadStaticData()
-      return true
-    } catch (e) {
-      console.error('Error updateJson:', e)
-      return false
+    // Actualizar el store en memoria directamente (sin fetch al archivo)
+    if (archivo === 'inventario.json') {
+      inventario.value = datos
+    } else if (archivo === 'suministros.json') {
+      suministros.value = datos
     }
+
+    return true
+  } catch (e) {
+    console.error('Error updateJson:', e)
+    return false
   }
+}
 
   return {
     devices,

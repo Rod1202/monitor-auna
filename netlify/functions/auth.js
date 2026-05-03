@@ -7,17 +7,25 @@ export default async (req) => {
   }
 
   const { pin } = await req.json()
-  const validPin = process.env.APP_PIN
+  const adminPin = process.env.APP_PIN
+  const viewerPin = process.env.APP_PIN_VIEWER
 
-  if (!validPin) {
+  if (!adminPin) {
     return new Response(JSON.stringify({ error: 'PIN no configurado' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     })
   }
 
-  if (pin === validPin) {
-    return new Response(JSON.stringify({ success: true }), {
+  if (pin === adminPin) {
+    return new Response(JSON.stringify({ success: true, role: 'admin' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  if (viewerPin && pin === viewerPin) {
+    return new Response(JSON.stringify({ success: true, role: 'viewer' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
