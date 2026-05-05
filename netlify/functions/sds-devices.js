@@ -48,6 +48,8 @@ export default async (req) => {
       deviceId: device.deviceId || null,
       serialNumber: device.serialNumber || 'N/A',
       lastContact: device.lastContact || null,
+      discoveryDate: device.discoveryDate || null,
+      ipAddress: device.ipAddress || null,
       estado_dispositivo: calcularEstado(device.lastContact),
       modelo: device.model || 'N/A',
     }))

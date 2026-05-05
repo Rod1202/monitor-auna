@@ -172,6 +172,12 @@
               </div>
             </template>
 
+            <template #item.ipAddress="{ item }">
+              <span class="text-caption" style="color:#64748b; font-family:monospace;">
+                {{ item.ipAddress || '—' }}
+              </span>
+            </template>
+
             <template #item.operario="{ item }">
               <div class="text-body-2" style="color:#334155;">{{ item.operario || 'Sin asignar' }}</div>
             </template>
@@ -209,20 +215,55 @@
               <span v-else class="text-caption" style="color:#cbd5e1;">—</span>
             </template>
 
-            <template #item.ultimo_suministro="{ item }">
-              <div v-if="item.ultimo_suministro">
-                <div class="text-caption font-weight-bold" style="color:#334155;">{{ item.ultimo_suministro.fecha_entrega }}</div>
-                <v-chip size="x-small" variant="flat" :color="envioColor(item.ultimo_suministro.status_envio)" class="font-weight-bold text-white">
-                  {{ item.ultimo_suministro.status_envio || 'DESCONOCIDO' }}
-                </v-chip>
-              </div>
-              <span v-else class="text-caption" style="color:#cbd5e1;">Sin envíos</span>
+            <template #item.firstReadBlack="{ item }">
+              <span class="text-caption" style="color:#334155;">
+                {{ formatFirstRead(item.toners?.find(t => t.colour === 'BLACK')?.firstRead) }}
+              </span>
             </template>
 
-            <template #item.accion_requerida="{ item }">
-              <v-btn variant="outlined" color="#cbd5e1" size="small" rounded="lg" class="text-none font-weight-bold" style="color:#64748b;" elevation="0" @click.stop="openDetail(item)">
-                Revisar
-              </v-btn>
+            <template #item.ultimoEnvioResumen="{ item }">
+              <div v-if="item.tipo === 'MONOCROMATICA'">
+                <div class="text-caption font-weight-bold" style="color:#334155;">
+                  {{ ultimoEnvioBlack(item)?.fecha_enprega || 'Sin registro' }}
+                </div>
+                <v-chip
+                  v-if="ultimoEnvioBlack(item)?.status_envio"
+                  size="x-small"
+                  rounded="lg"
+                  :color="envioColor(ultimoEnvioBlack(item).status_envio)"
+                  variant="tonal"
+                  class="font-weight-bold"
+                >
+                  {{ ultimoEnvioBlack(item).status_envio }}
+                </v-chip>
+              </div>
+              <span v-else class="text-caption" style="color:#cbd5e1;">Color</span>
+            </template>
+            
+            <template #item.evaluar="{ item }">
+              <v-chip
+                v-if="item.evaluar"
+                size="x-small"
+                rounded="lg"
+                :color="item.evaluar === 'EVALUAR' ? '#e8f0fe' : '#fff8e1'"
+                :style="`color:${item.evaluar === 'EVALUAR' ? '#0066ff' : '#f57c00'}; font-weight:700;`"
+              >
+                {{ item.evaluar }}
+              </v-chip>
+              <span v-else class="text-caption" style="color:#cbd5e1;">—</span>
+            </template>
+
+            <template #item.accion="{ item }">
+              <v-chip
+                v-if="item.accion"
+                size="x-small"
+                rounded="lg"
+                :color="accionColor(item.accion).bg"
+                :style="`color:${accionColor(item.accion).text}; font-weight:700;`"
+              >
+                {{ item.accion }}
+              </v-chip>
+              <span v-else class="text-caption" style="color:#cbd5e1;">—</span>
             </template>
 
           </v-data-table>
@@ -271,11 +312,14 @@ const headers = [
   { title: 'Área / Sub Área', key: 'area' },
   { title: 'Operario', key: 'operario' },
   { title: 'Serie / Modelo', key: 'serie' },
+  { title: 'IP', key: 'ipAddress', sortable: false },
   { title: 'Status', key: 'status' },
   { title: 'Estado SDS', key: 'estado_dispositivo' },
   { title: 'Tóners', key: 'toners', sortable: false },
-  { title: 'Último Envío', key: 'ultimo_suministro', sortable: false },
-  { title: 'Acción', key: 'accion_requerida', align: 'center', sortable: false },
+  { title: 'Primera Lectura', key: 'firstReadBlack', sortable: false },
+  { title: 'Último Envío BLACK', key: 'ultimoEnvioResumen', sortable: false },
+  { title: 'Evaluar', key: 'evaluar', sortable: false },
+  { title: 'Acción', key: 'accion', sortable: false },
 ]
 
 // Función base de filtrado sin filtro de cards
@@ -346,6 +390,40 @@ function toggleFiltroCard(filtro) {
   filtroEstadoCard.value = filtroEstadoCard.value === filtro ? null : filtro
 }
 
+
+function formatFirstRead(isoDate) {
+  if (!isoDate) return '—'
+  try {
+    return new Date(isoDate).toLocaleDateString('es-PE', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    })
+  } catch { return '—' }
+}
+
+function ultimoEnvioBlack(item) {
+  return store.suministros
+    .filter(s => s.serie === item.serie && s.Color?.toUpperCase() === 'BLACK')
+    .sort((a, b) => {
+      const p = (f) => {
+        if (!f || f.trim() === '') return -1
+        const [d, m, y] = f.split('/')
+        return new Date(`${y}-${m}-${d}`).getTime()
+      }
+      return p(b.fecha_enprega) - p(a.fecha_enprega)
+    })[0] || null
+}
+
+function accionColor(accion) {
+  const map = {
+    'SOLICITAR TONER':     { bg: '#ffebee', text: '#c62828' },
+    'TONER EN SEDE':       { bg: '#e8f5e9', text: '#2e7d32' },
+    'SEGUIMIENTO':         { bg: '#fff8e1', text: '#f57c00' },
+    'VALIDAR IMPRESORAS COLOR': { bg: '#f1f5f9', text: '#64748b' },
+  }
+  return map[accion] || { bg: '#f1f5f9', text: '#64748b' }
+}
+
+
 function openDetail(item) {
   selectedDevice.value = item
   dialog.value = true
@@ -359,6 +437,9 @@ function envioColor(status) {
   const map = { ATENDIDO: '#10b981', PENDIENTE: '#f59e0b', SOLICITADO: '#0066ff', CANCELADO: '#c62828', TRANSITO: '#f59e0b' }
   return map[status?.toUpperCase()] || '#94a3b8'
 }
+
+
+
 
 function limpiarFiltros() {
   filtroOperario.value = null

@@ -59,6 +59,78 @@ export const useSdsStore = defineStore('sds', () => {
     }
   }
 
+  const calcularAccion = (item, procesarToners, suministros, device) => {
+  // Solo aplica a series con SDS (no SIN_SDS)
+  if (!device) return null
+
+  // Impresoras COLOR — acción fija, solo mostramos info del tóner BLACK
+  if (item.tipo === 'COLOR') {
+    return 'VALIDAR IMPRESORAS COLOR'
+  }
+
+  // A partir de aquí solo MONOCROMATICA
+  const tonerBlack = procesarToners.find(t => t.colour?.toUpperCase() === 'BLACK')
+  const firstRead = tonerBlack?.firstRead || null
+
+  // Suministros del color BLACK ordenados por fecha desc
+  const suministrosBlack = suministros
+    .filter(s => s.serie === item.serie && s.Color?.toUpperCase() === 'BLACK')
+    .sort((a, b) => parseFecha(b.fecha_enprega) - parseFecha(a.fecha_enprega))
+
+  const ultimoEnvio = suministrosBlack[0]
+
+  // Sin envío registrado
+  if (!ultimoEnvio || !ultimoEnvio.fecha_enprega || ultimoEnvio.fecha_enprega.trim() === '') {
+    return 'SOLICITAR TONER'
+  }
+
+  const statusEnvio = ultimoEnvio.status_envio?.toUpperCase()
+
+  // Estado diferente a ATENDIDO pero no vacío
+  if (statusEnvio !== 'ATENDIDO') {
+    return 'SEGUIMIENTO'
+  }
+
+  // Estado ATENDIDO — comparar firstRead vs fecha entrega
+  if (firstRead) {
+    const firstReadTs = new Date(firstRead).getTime()
+    const fechaEntregaTs = parseFecha(ultimoEnvio.fecha_enprega)
+
+    if (firstReadTs > fechaEntregaTs) {
+      // firstRead mayor que fecha entrega → ya usó el tóner
+      return 'SOLICITAR TONER'
+    } else {
+      // firstRead menor o igual → tóner aún en sede
+      return 'TONER EN SEDE'
+    }
+  }
+
+  return 'SOLICITAR TONER'
+}
+
+  const calcularEvaluar = (item, suministros, device) => {
+    // Solo aplica si tiene SDS y no es COLOR
+    if (!device || item.tipo === 'COLOR') return null
+
+    const discoveryDate = device.discoveryDate
+    if (!discoveryDate) return null
+
+    // Suministros BLACK ordenados por fecha desc
+    const suministrosBlack = suministros
+      .filter(s => s.serie === item.serie && s.Color?.toUpperCase() === 'BLACK')
+      .sort((a, b) => parseFecha(b.fecha_enprega) - parseFecha(a.fecha_enprega))
+
+    const ultimoEnvio = suministrosBlack[0]
+    if (!ultimoEnvio || !ultimoEnvio.fecha_enprega || ultimoEnvio.fecha_enprega.trim() === '') {
+      return null
+    }
+
+    const discoveryTs = new Date(discoveryDate).getTime()
+    const fechaEntregaTs = parseFecha(ultimoEnvio.fecha_enprega)
+
+    return discoveryTs < fechaEntregaTs ? 'EVALUAR' : 'REVISAR CON GESTOR'
+  }
+
   // --- Data combinada (cruce de las 3 fuentes y validaciones internas) ---
   const combinedData = computed(() => {
     return inventario.value.map(item => {
@@ -121,6 +193,7 @@ export const useSdsStore = defineStore('sds', () => {
         deviceId: device?.deviceId || null,
         lastContact: device?.lastContact || null,
         estado_dispositivo: device ? device.estado_dispositivo : 'SIN_SDS',
+        ipAddress: device?.ipAddress || null,
         modelo_sds: device?.modelo || null,
 
         // Toners procesados con la validación insertada
@@ -136,7 +209,9 @@ export const useSdsStore = defineStore('sds', () => {
           guia: suministroGeneral.guia,
           porcentaje: suministroGeneral.porcentaje,
           dias_restantes: suministroGeneral.dias_restantes
-        } : null
+        } : null,
+        accion: calcularAccion(item, procesarToners, suministros.value, device),
+        evaluar: calcularEvaluar(item, suministros.value, device),
       }
     })
   })
