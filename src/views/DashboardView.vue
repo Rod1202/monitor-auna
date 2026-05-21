@@ -46,10 +46,10 @@
               :label="stat.label"
               :value="stat.value"
               :text-color="stat.textColor"
-              :is-active="filtroEstadoCard === stat.filtro"
+              :is-active="stat.filtro && filtroEstadoCard === stat.filtro"
               :total-value="statCards[0].value"
               :icon="stat.icon"
-              @click="toggleFiltroCard(stat.filtro)"
+              @click="handleStatCardClick(stat)"
             />
           </v-col>
         </v-row>
@@ -75,6 +75,9 @@
             </v-col>
             <v-col cols="12" sm="6" md="2">
               <v-select v-model="filtroOperario" :items="operarioOptions" label="Operario" variant="outlined" density="compact" hide-details rounded="lg" clearable bg-color="#f8fafc" color="#0066ff" />
+            </v-col>
+            <v-col v-if="isClient2026" cols="12" sm="6" md="2">
+              <v-select v-model="filtroEnvio" :items="envioOptions" label="Estado Envío" variant="outlined" density="compact" hide-details rounded="lg" clearable bg-color="#f8fafc" color="#0066ff" />
             </v-col>
             <v-col cols="12" sm="6" md="2">
               <v-btn color="#0066ff" variant="tonal" rounded="lg" size="default" block class="text-none font-weight-bold" @click="limpiarFiltros">
@@ -279,6 +282,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useSdsStore } from '../stores/sdsStore'
 import AppSidebar from '../components/AppSidebar.vue'
@@ -292,6 +296,7 @@ import { useRole } from '../composables/useRole.js'
 const { isAdmin } = useRole()
 
 const store = useSdsStore()
+const router = useRouter()
 const { lgAndUp } = useDisplay()
 const sidebarRef = ref(null)
 
@@ -301,13 +306,15 @@ const filtroZona = ref(null)
 const filtroTipo = ref(null)
 const filtroStatus = ref(null)
 const filtroSede = ref(null)
+const filtroEnvio = ref(null)
 const filtroEstadoCard = ref(null)
 const filtroDias = ref(null)
 const filtroPercent = ref(null)
 const dialog = ref(false)
 const selectedDevice = ref(null)
+const isClient2026 = sessionStorage.getItem('app_pin') === '2026'
 
-const headers = [
+const allHeaders = [
   { title: 'Sede', key: 'sede' },
   { title: 'Área / Sub Área', key: 'area' },
   { title: 'Operario', key: 'operario' },
@@ -322,14 +329,29 @@ const headers = [
   { title: 'Acción', key: 'accion', sortable: false },
 ]
 
+const headers = computed(() => {
+  if (!isClient2026) return allHeaders
+  return allHeaders.filter(h => !['firstReadBlack', 'evaluar'].includes(h.key))
+})
+
 // Función base de filtrado sin filtro de cards
-const filterBase = (skipKey = null) => {
+const filterBase = (skipKey = null, applyClientPercent = true) => {
   return store.combinedData.filter(item => {
     if (skipKey !== 'operario' && filtroOperario.value && item.operario !== filtroOperario.value) return false
     if (skipKey !== 'zona' && filtroZona.value && item.zona !== filtroZona.value) return false
     if (skipKey !== 'tipo' && filtroTipo.value && item.tipo !== filtroTipo.value) return false
     if (skipKey !== 'status' && filtroStatus.value && item.status !== filtroStatus.value) return false
     if (skipKey !== 'sede' && filtroSede.value && item.sede !== filtroSede.value) return false
+
+    if (isClient2026 && filtroEnvio.value) {
+      const ultimoBlack = ultimoEnvioBlack(item)
+      if (ultimoBlack?.status_envio?.toUpperCase() !== filtroEnvio.value) return false
+    }
+
+    if (applyClientPercent && isClient2026 && filtroEstadoCard.value !== 'SIN_SDS') {
+      const tieneTonerSobre20 = item.toners?.some(t => t.percentLeft !== null && Number(t.percentLeft) > 20)
+      if (!tieneTonerSobre20) return false
+    }
 
     // Filtro días restantes — aplica si algún tóner tiene daysLeft <= valor
     if (filtroDias.value !== null) {
@@ -368,18 +390,36 @@ const filteredData = computed(() => {
 
 // Stats calculadas sobre filterBase (sin filtro de cards)
 // Para que los números de las cards reflejen los filtros de sección
-const baseData = computed(() => filterBase(null))
+const baseData = computed(() => filterBase(null, false))
 
-const statCards = computed(() => [
-  { label: 'Total', value: baseData.value.length, textColor: '#0066ff', filtro: null, icon: 'mdi-printer-outline' },
-  { label: 'Sincronizados', value: baseData.value.filter(d => d.estado_dispositivo === 'SINCRONIZADO').length, textColor: '#2e7d32', filtro: 'SINCRONIZADO', icon: 'mdi-cloud-check-outline' },
-  { label: 'Stand By', value: baseData.value.filter(d => d.estado_dispositivo === 'STAND_BY').length, textColor: '#f57c00', filtro: 'STAND_BY', icon: 'mdi-pause-circle-outline' },
-  { label: 'Desincronizados', value: baseData.value.filter(d => d.estado_dispositivo === 'DESINCRONIZADO').length, textColor: '#c62828', filtro: 'DESINCRONIZADO', icon: 'mdi-cloud-off-outline' },
-  { label: 'Sin SDS', value: baseData.value.filter(d => d.estado_dispositivo === 'SIN_SDS').length, textColor: '#555', filtro: 'SIN_SDS', icon: 'mdi-laptop-off' },
-  { label: 'Críticos', value: baseData.value.filter(d => d.toners?.some(t => t.estado_toner === 'CRITICO')).length, textColor: '#c62828', filtro: 'CRITICO', icon: 'mdi-alert-circle-outline' },
-])
+const enviosDelMes = computed(() => {
+  const now = new Date()
+  return store.suministros.filter(s => {
+    if (s.status_envio?.toUpperCase() !== 'ATENDIDO') return false
+    const fecha = parseFechaSuministro(s.fecha_enprega)
+    return fecha && fecha.getMonth() === now.getMonth() && fecha.getFullYear() === now.getFullYear()
+  }).length
+})
+
+const statCards = computed(() => {
+  const cards = [
+    { label: 'Total', value: baseData.value.length, textColor: '#0066ff', filtro: null, icon: 'mdi-printer-outline' },
+    { label: 'Sincronizados', value: baseData.value.filter(d => d.estado_dispositivo === 'SINCRONIZADO').length, textColor: '#2e7d32', filtro: 'SINCRONIZADO', icon: 'mdi-cloud-check-outline' },
+    { label: 'Stand By', value: baseData.value.filter(d => d.estado_dispositivo === 'STAND_BY').length, textColor: '#f57c00', filtro: 'STAND_BY', icon: 'mdi-pause-circle-outline' },
+    { label: 'Desincronizados', value: baseData.value.filter(d => d.estado_dispositivo === 'DESINCRONIZADO').length, textColor: '#c62828', filtro: 'DESINCRONIZADO', icon: 'mdi-cloud-off-outline' },
+    { label: 'Sin SDS', value: baseData.value.filter(d => d.estado_dispositivo === 'SIN_SDS').length, textColor: '#555', filtro: 'SIN_SDS', icon: 'mdi-laptop-off' },
+  ]
+
+  if (isClient2026) {
+    cards.push({ label: 'Envios del Mes', value: enviosDelMes.value, textColor: '#0066ff', route: '/envios-mes', icon: 'mdi-truck-fast-outline' })
+  }
+
+  cards.push({ label: 'Críticos', value: baseData.value.filter(d => d.toners?.some(t => t.estado_toner === 'CRITICO')).length, textColor: '#c62828', filtro: 'CRITICO', icon: 'mdi-alert-circle-outline' })
+  return cards
+})
 
 // Opciones de filtros
+const envioOptions = ['ATENDIDO', 'TRANSITO']
 const sedeOptions = computed(() => [...new Set(filterBase('sede').map(d => d.sede).filter(Boolean))].sort())
 const zonaOptions = computed(() => [...new Set(filterBase('zona').map(d => d.zona).filter(Boolean))].sort())
 const tipoOptions = computed(() => [...new Set(filterBase('tipo').map(d => d.tipo).filter(Boolean))].sort())
@@ -390,6 +430,21 @@ function toggleFiltroCard(filtro) {
   filtroEstadoCard.value = filtroEstadoCard.value === filtro ? null : filtro
 }
 
+function handleStatCardClick(stat) {
+  if (stat.route) {
+    router.push(stat.route)
+    return
+  }
+  toggleFiltroCard(stat.filtro)
+}
+
+function parseFechaSuministro(fechaStr) {
+  if (!fechaStr) return null
+  const [d, m, y] = fechaStr.split('/')
+  if (!d || !m || !y) return null
+  const fecha = new Date(Number(y), Number(m) - 1, Number(d))
+  return Number.isNaN(fecha.getTime()) ? null : fecha
+}
 
 function formatFirstRead(isoDate) {
   if (!isoDate) return '—'
@@ -447,6 +502,7 @@ function limpiarFiltros() {
   filtroTipo.value = null
   filtroStatus.value = null
   filtroSede.value = null
+  filtroEnvio.value = null
   filtroEstadoCard.value = null
   filtroDias.value = null
   filtroPercent.value = null

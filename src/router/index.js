@@ -20,6 +20,18 @@ const router = createRouter({
       beforeEnter: (to, from, next) => {
         sessionStorage.getItem('authenticated') === 'true' ? next() : next('/')
       }
+    },
+    {
+      path: '/envios-mes',
+      name: 'envios-mes',
+      component: () => import('../views/EnviosMesView.vue'),
+      beforeEnter: (to, from, next) => {
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+          next('/')
+          return
+        }
+        sessionStorage.getItem('app_pin') === '2026' ? next() : next('/dashboard')
+      }
     }
   ]
 })

@@ -34,6 +34,16 @@
         active-color="#0066ff"
         @click="router.push('/inventario')"
       />
+      <v-list-item
+        v-if="isClient2026"
+        prepend-icon="mdi-truck-fast-outline"
+        title="Envios del Mes"
+        value="envios-mes"
+        rounded="lg"
+        :active="activeRoute === 'envios-mes'"
+        active-color="#0066ff"
+        @click="router.push('/envios-mes')"
+      />
     </v-list>
 
     <!-- Footer -->
@@ -77,10 +87,12 @@ defineProps({
 const router = useRouter()
 const { lgAndUp } = useDisplay()
 const drawer = ref(true)
+const isClient2026 = sessionStorage.getItem('app_pin') === '2026'
 
 function logout() {
   sessionStorage.removeItem('authenticated')
   sessionStorage.removeItem('app_pin')
+  sessionStorage.removeItem('role')
   router.push('/')
 }
 
